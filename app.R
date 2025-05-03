@@ -9,9 +9,49 @@ library(DT)
 library(writexl)
 library(tools)
 library(vroom)
+library(dplyr)
 
 #Load data----------------------------------------------------------------------
 foods_df <- read_excel('data.xlsx', sheet = 'food_data')
+
+#Modules------------------------------------------------------------------------
+
+#UI - Food table
+food_ui <- function(id, group_label){
+  ns <- NS(id)
+  
+  tabPanel(group_label,
+           box(
+             width = 12, solidHeader = FALSE, status = 'warning',
+             DTOutput(NS(id,'food_selection_output')),style = "overflow-y: scroll;overflow-x: scroll;"
+           )
+    
+  )
+}
+
+#Server - Food table
+food_server <- function(id, group_label){
+  moduleServer(id, function(input, output, session){
+    food_values <- reactiveValues()
+    food_values$index <- NULL
+    
+    data <- reactive({foods_df[foods_df$food_group == group_label,]})
+    
+    output$food_selection_output <- DT::renderDataTable(
+      datatable(
+        data(),
+        colnames = c('Food group', 'Food name', 'ID', 'CF/g(CO2)', 'WF/L', 'EF/gm2', 'Energy (kJ/g)','Fat (g)','Sat. fat (g)','CHO (g)','Sugars (g)', 'Fibre (g)','Protein (g)','Sodium (mg)','Price ($/100)'),
+        selection = 'multiple',
+        rownames = FALSE,
+        width = '80%'
+      )
+    )
+    
+    food_values$index <- reactive(input$food_selection_output_rows_selected)
+    
+    return(reactive({data()$food_id[food_values$index()]}))
+  })
+}
 
 #UI/Tabs------------------------------------------------------------------------
 
@@ -44,20 +84,6 @@ foods_tab <- tabPanel('Foods',
                             conditionalPanel(
                               condition = "input.type_food_insert_input == 'Assemble food data from our database'",
                               column(
-                                width = 2,
-                                tags$h3(span(HTML('Varieties'), style = 'padding-left:15px')),
-                                box(
-                                  height = '120px', width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                  checkboxGroupInput(
-                                    "varieties_input",
-                                    label = NULL,
-                                    c(1:3),
-                                    selected = 1
-                                  ),
-                                  br()
-                                )
-                              ),
-                              column(
                                 width = 6,
                                 box(
                                   height = '120px', width = 12, solidHeader = TRUE,
@@ -80,7 +106,7 @@ foods_tab <- tabPanel('Foods',
                                   width = 12, solidHeader = FALSE, status = 'warning',
                                   p('Your data must be in an Excel spreadsheet (.xlsx format).', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                   p('Also, your column names must be',strong('exactly'),'as the ones in the model sheet.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-                                  p('Be aware of the variable types: variety, emission and price columns',strong('must'),'be numeric.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                  p('Be aware of the variable types: emission and price columns',strong('must'),'be numeric.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                   p("Don't delete any column. If you don't want to use a given variable, set its value to zero. Food group, food name and food ID are",strong('mandatory'), '.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                   p('Please download the sheet model if you have any doubts. File size is up to 10MB. After submitting, please click the',strong('Proceed'),' button.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                   div(
@@ -128,9 +154,21 @@ foods_tab <- tabPanel('Foods',
                               column(
                                 width = 12,
                                 tags$h3(span(HTML('Pre-loaded foods'), style = 'padding-left:15px')),
-                                box(
-                                  width = 12, solidHeader = FALSE, status = 'warning',
-                                  DTOutput('food_selection_output'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                div(
+                                  id = 'foods_form',
+                                  tabsetPanel(
+                                    food_ui('alcohol', 'Alcohol'),
+                                    food_ui('beverages', 'Beverages'),
+                                    food_ui('dairy', 'Dairy/alternatives'),
+                                    food_ui('discretionary', 'Discretionary foods'),
+                                    food_ui('fats', 'Fats/oils'),
+                                    food_ui('fruit', 'Fruit'),
+                                    food_ui('grains', 'Grains'),
+                                    food_ui('protein', 'Protein foods'),
+                                    food_ui('sauces', 'Sauces/sugars'),
+                                    food_ui('takeaway', 'Takeaway'),
+                                    food_ui('vegetables', 'Vegetables')
+                                  )
                                 )
                               )
                               
@@ -206,13 +244,60 @@ foods_tab <- tabPanel('Foods',
 
                       )
 
+#Constraints
+
+#Food constraints
+food_constraints_tab <- tabPanel('Food constraints',
+                            useShinyjs(),
+                            uiOutput('servesOutput')
+                            )
+
+#Food group constraints
+food_group_constraints_tab <- tabPanel('Food group constraints',
+                                 useShinyjs(),
+)
+
+#Nutrients constraints
+nutrient_constraints_tab <- tabPanel('Nutrient constraints',
+                                       useShinyjs(),
+)
+
+
+#General tab
+constraint_tabs <- tabPanel('Constraints',
+                               fluidRow(
+                                 column(width = 4,
+                                        tags$h3(span(HTML('Data insertion'), style = 'padding-left:15px')),
+                                        box(
+                                          height = '120px', width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                          radioButtons(
+                                            "type_constraints_input",
+                                            label = NULL,
+                                            c('Pre-loaded profiles', 'Load your own data')
+                                          ),
+                                          br(),
+                                          br()
+                                        ))
+                               ),
+                              conditionalPanel(
+                                condition = "input.type_constraints_input == 'Load your own data'",
+                                tabsetPanel(
+                                  food_constraints_tab,
+                                  food_group_constraints_tab,
+                                  nutrient_constraints_tab,
+                                )
+                              )
+                              
+)
+
 #General
 ui <- navbarPage(title = 'DIETCOST',
                  theme = shinytheme("cosmo"),
                  useShinyjs(),
                  tags$head(
                    tags$style(HTML('
-                   
+                                    rat{height: 60px}
+                                    
                                          .shiny-notification {
                                    position:fixed;
                                    top: calc(50%);
@@ -245,48 +330,30 @@ ui <- navbarPage(title = 'DIETCOST',
                  ),
                  header = tagList(useShinydashboard()),
                  intro_tab,
-                 foods_tab)
+                 foods_tab,
+                 constraint_tabs)
 
 #Server-------------------------------------------------------------------------
 server <- function(input, output, session){
   options(shiny.maxRequestSize=10*1024^2)
-  food_values <- reactiveValues()
-  food_values$index <- NULL
+  data <- reactive(foods_df)
+  
+  food_ids <- reactiveValues(ids = list(alcohol = food_server('alcohol', 'Alcohol'), 
+                                        beverages = food_server('beverages', 'Beverages'),
+                                        dairy = food_server('dairy', 'Dairy/alternatives'),
+                                        discretionary = food_server('discretionary', 'Discretionary foods'),
+                                        fats = food_server('fats', 'Fats/oils'),
+                                        fruit = food_server('fruit', 'Fruit'),
+                                        grains = food_server('grains', 'Grains'),
+                                        protein = food_server('protein', 'Protein foods'),
+                                        sauces = food_server('sauces', 'Sauces/sugars'),
+                                        takeaway = food_server('takeaway', 'Takeaway'),
+                                        vegetables = food_server('vegetables', 'Vegetables')))
 
-  data <- reactive({
-    if(input$type_food_insert_input == 'Assemble food data from our database'){
-      foods_df[foods_df$variety %in% input$varieties_input,]
-    }
-  })
-  
-  #Varieties selection check
-  observe({
-    if(input$type_food_insert_input == 'Assemble food data from our database' && length(input$varieties_input) < 1)
-    {
-      updateCheckboxGroupInput(session, "varieties_input", selected = 1)
-    }
-  })
-  
-  #Foods selection
-  output$food_selection_output <- DT::renderDataTable(
-    datatable(
-              data(),
-              colnames = c('Food group', 'Food name', 'ID', 'Variety', 'CF/g(CO2)', 'WF/L', 'EF/gm2', 'Energy (kJ/g)','Fat (g)','Sat. fat (g)','CHO (g)','Sugars (g)', 'Fibre (g)','Protein (g)','Sodium (mg)','Price ($/100)'),
-              selection = 'multiple',
-              rownames = FALSE,
-              width = '80%'
-              )
-  )
-  
-  observe({
-    if(input$type_food_insert_input == 'Assemble food data from our database' && !is.null(input$food_selection_output_rows_selected)){
-      food_values$index <- input$food_selection_output_rows_selected
-    }
-  })
-  
+
   df1 <- reactive({
     if(input$type_food_insert_input == 'Assemble food data from our database'){
-      data()[food_values$index,]
+      data() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$takeaway(), food_ids$ids$vegetables())) 
     } else{
       file <- input$food_data_input
       req(file)
@@ -295,7 +362,7 @@ server <- function(input, output, session){
         model_df <- read_excel('www/food_data_model.xlsx')
         if(identical(names(temp_df), names(model_df))){
           if(!isTRUE(any(sapply(temp_df[,c('CF_gCO2eq', 'WF_l', 'EF_g_m2', 'price')], is.character)))){
-          if(!isTRUE(any(sapply(temp_df[,c('food_name', 'food_id')], is.na)))){
+          if(!isTRUE(any(sapply(temp_df[,c('food_group','food_name', 'food_id')], is.na)))){
             read_excel(file$datapath)
           }
             
@@ -312,7 +379,7 @@ server <- function(input, output, session){
   
   observe({
     useShinyjs()
-    if(length(input$food_selection_output_rows_selected)==0){
+    if(length(food_ids$ids$alcohol()) == 0 && length(food_ids$ids$beverages()) == 0 && length(food_ids$ids$dairy()) == 0 && length(food_ids$ids$discretionary()) == 0 && length(food_ids$ids$fats()) == 0 && length(food_ids$ids$fruit()) == 0 && length(food_ids$ids$grains()) == 0 && length(food_ids$ids$protein()) == 0 && length(food_ids$ids$sauces()) == 0 && length(food_ids$ids$takeaway()) == 0 && length(food_ids$ids$vegetables()) == 0){
       disable('saving_input')
       disable('proceed_input')
     } else{
@@ -331,10 +398,10 @@ server <- function(input, output, session){
         model_df <- read_excel('www/food_data_model.xlsx')
         if(identical(names(temp_df),names(model_df))){
           if(!isTRUE(any(sapply(temp_df[,c('CF_gCO2eq', 'WF_l', 'EF_g_m2', 'price')], is.character)))){
-            if(!isTRUE(any(sapply(temp_df[,c('food_name', 'food_id')], is.na)))){
+            if(!isTRUE(any(sapply(temp_df[,c('food_group','food_name', 'food_id')], is.na)))){
               enable('proceed_upload_input')
             } else{
-              showModal(modalDialog("Check your file! There are missing values either in food name or ID column."))
+              showModal(modalDialog("Check your file! There are missing values either in food group, name or ID columns."))
               disable('proceed_upload_input')
             }
           } else{
@@ -412,7 +479,19 @@ server <- function(input, output, session){
             Shiny.onInputChange('proceed_upload_button', click)
             var proceed_upload_input = document.getElementById('proceed_upload_input')
             proceed_upload_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_upload_button', click)};
-            ")  
+            ")
+      food_ids <- reactiveValues(ids = list(  food_ids <- reactiveValues(ids =   list(alcohol = NULL, 
+                                                                                      beverages = NULL,
+                                                                                      dairy = NULL,
+                                                                                      discretionary = NULL,
+                                                                                      fats = NULL,
+                                                                                      fruit = NULL,
+                                                                                      grains = NULL,
+                                                                                      protein = NULL,
+                                                                                      sauces = NULL,
+                                                                                      takeaway = NULL,
+                                                                                      vegetables = NULL))))
+
     }
 
   )
@@ -423,6 +502,32 @@ server <- function(input, output, session){
       file.copy('www/food_data_model.xlsx',file)
     }
   )
+  
+  output$servesOutput <- renderUI({
+    fluidRow(
+      column(width = 4,
+             box(
+               width = 12, solidHeader = FALSE,
+               lapply(1:nrow(df1()), function(i) {
+                 sliderInput(inputId = paste0('slider_',df1()$food_name[i]), label = paste0(df1()$food_name[i]),
+                             min = 0, max = 20, value = c(0,20), step = 1)
+               })
+               
+             )
+             ),
+      
+      column(width = 4,
+             box(
+               width = 12, solidHeader = FALSE,
+               lapply(1:nrow(df1()), function(i) {
+                 numericInput(inputId = paste0('numeric_',df1()$food_name[i]), label = 'Target', value = 0)
+               })
+             ))
+    
+
+    )
+
+  })
 
 }
 
