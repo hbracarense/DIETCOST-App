@@ -13,6 +13,50 @@ library(dplyr)
 
 #Load data----------------------------------------------------------------------
 foods_df <- read_excel('data.xlsx', sheet = 'food_data')
+food_constraints_df <- read_excel('data.xlsx', sheet = 'food_constraints')
+food_group_constraints_df <- read_excel('data.xlsx', sheet = 'food_group_constraints')
+nutrient_targets_df <- read_excel('data.xlsx', sheet = 'nutrient_targets')
+
+#Functions----------------------------------------------------------------------
+nutritentsTableName <- function(col_name){
+  switch(col_name,
+         'energy_mj_min' = 'Energy min (kJ)',  
+         'energy_mj_max' = 'Energy max (kJ)',  
+         'fat_grams_min' = 'Fat min (g)',  
+         'fat_grams_max' = 'Fat max (g)',  
+         'sat_fat_grams_min' = 'Saturated fat min (g)',  
+         'sat_fat_grams_max' = 'Saturated fat max (g)',  
+         'CHO_grams_min' = 'Carbohydrates min (g)',  
+         'CHO_grams_max' = 'Carbohydrates max (g)',  
+         'sugars_grams_min' = 'Sugars min (g)',  
+         'sugars_grams_max' = 'Sugars max (g)',  
+         'fibre_grams_min' = 'Fibre min (g)',  
+         'fibre_grams_max' = 'Fibre max (g)',  
+         'protein_grams_min' = 'Protein min (g)',  
+         'protein_grams_max' = 'Protein max (g)',  
+         'sodium_mgrams_min' = 'Sodium min (mg)',  
+         'sodium_mgrams_max' = 'Sodium max (mg)',  
+         'protein_perc_min' = 'Protein min (%)',  
+         'protein_perc_max' = 'Protein max (%)',  
+         'sat_fat_perc_min' = 'Saturated fat min (%)',  
+         'sat_fat_perc_max' = 'Saturated fat max (%)',  
+         'fat_perc_min' = 'Fat min (%)',  
+         'fat_perc_max' = 'Fat max (%)',  
+         'CHO_perc_min' = 'Carbohydrates min (%)',  
+         'CHO_perc_max' = 'Carbohydrates max (%)',  
+         'redmeat_grams_min' = 'Red meat min (g)',  
+         'redmeat_grams_max' = 'Red meat max (g)',  
+         'sugars_perc_min' = 'Sugars min (%)',  
+         'sugars_perc_max' = 'Sugars max (%)',  
+         'alcohol_perc_min' = 'Alcohol min (%)',  
+         'alcohol_perc_max' = 'Alcohol max (%)',  
+         'discretionary_perc_min' = 'Discretionary min (%)',  
+         'discretionary_perc_max' = 'Discretionary max (%)',  
+         'takeaway_perc_min' = 'Takeaway min (%)',  
+         'takeaway_perc_max' = 'Takeaway max (%)'
+         )
+}
+
 
 #Modules------------------------------------------------------------------------
 
@@ -247,29 +291,46 @@ foods_tab <- tabPanel('Foods',
 #Constraints
 
 #Food constraints
-food_constraints_tab <- tabPanel('Food constraints',
+food_constraints_select_tab <- tabPanel('Food constraints',
                             useShinyjs(),
-                            uiOutput('servesOutput')
+                            uiOutput('servesSelectOutput')
                             )
 
+food_constraints_pre_tab <- tabPanel('Food constraints',
+                                        useShinyjs(),
+                                        DTOutput('servesPreOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                       
+)
+
 #Food group constraints
-food_group_constraints_tab <- tabPanel('Food group constraints',
+food_group_constraints_select_tab <- tabPanel('Food group constraints',
                                  useShinyjs(),
 )
 
+food_group_constraints_pre_tab <- tabPanel('Food group constraints',
+                                              useShinyjs(),
+                                           DTOutput('groupsPreOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+)
+
 #Nutrients constraints
-nutrient_constraints_tab <- tabPanel('Nutrient constraints',
+nutrient_constraints_select_tab <- tabPanel('Nutrient constraints',
                                        useShinyjs(),
+                                       DTOutput('nutrientsSelectOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+)
+
+nutrient_constraints_pre_tab <- tabPanel('Nutrient constraints',
+                                            useShinyjs(),
+                                         DTOutput('nutrientsPreOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
 )
 
 
 #General tab
 constraint_tabs <- tabPanel('Constraints',
                                fluidRow(
-                                 column(width = 4,
+                                 column(width = 3,
                                         tags$h3(span(HTML('Data insertion'), style = 'padding-left:15px')),
                                         box(
-                                          height = '120px', width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                          width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
                                           radioButtons(
                                             "type_constraints_input",
                                             label = NULL,
@@ -277,16 +338,107 @@ constraint_tabs <- tabPanel('Constraints',
                                           ),
                                           br(),
                                           br()
-                                        ))
+                                        )),
+                                 column(width = 3,
+                                        conditionalPanel(
+                                          condition = "input.type_constraints_input == 'Pre-loaded profiles'",
+                                          tags$h3(span(HTML('Individual'), style = 'padding-left:15px')),
+                                          box(
+                                            width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                            radioButtons(
+                                              "person_profiles_input",
+                                              label = NULL,
+                                              c('45-years old man', '37-years old woman', '12-years old boy', '8-years old girl')
+                                            ),
+                                            br(),
+                                            br()
+                                        )
+                                        )
+                                 ),
+                                 column(width = 3,
+                                        conditionalPanel(
+                                          condition = "input.type_constraints_input == 'Pre-loaded profiles'",
+                                          tags$h3(span(HTML('Diet'), style = 'padding-left:15px')),
+                                          box(
+                                            width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                            radioButtons(
+                                              "diet_profiles_input",
+                                              label = NULL,
+                                              c('Current', 'EAT-Lancet', 'Healthy')
+                                            ),
+                                            br(),
+                                            br()
+                                          )
+                                        )
+                                 ),
+                                 column(width = 3,
+                                        conditionalPanel(
+                                          condition = "input.type_constraints_input == 'Pre-loaded profiles' && input.diet_profiles_input != 'Healthy' && input.tabset_pre_profile == 'Nutrient constraints' && (input.person_profiles_input == '45-years old man' || input.person_profiles_input == '37-years old woman') && input.nutrient_columns_input && (input.nutrient_columns_input.indexOf('Alcohol (%)') > -1 || input.nutrient_columns_input.indexOf('Discretionary (%)') > -1 || input.nutrient_columns_input.indexOf('Takeaway (%)') > -1)",
+                                          tags$h3(span(HTML('Special groups intake'), style = 'padding-left:15px')),
+                                          box(
+                                              width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                              conditionalPanel(
+                                                condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Alcohol (%)') > -1",
+                                                sliderInput(inputId = 'slider_alcohol_perc_input', label = 'Alcohol energy percentage',
+                                                            min = 0, max = 100, value = c(0,100), step = 1)
+                                              ),
+                                              conditionalPanel(
+                                                condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Discretionary (%)') > -1",
+                                                sliderInput(inputId = 'slider_discretionary_perc_input', label = 'Discretionary foods energy percentage',
+                                                            min = 0, max = 100, value = c(0,100), step = 1)
+                                              ),
+                                              conditionalPanel(
+                                                condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Takeaway (%)') > -1",
+                                                sliderInput(inputId = 'slider_takeaway_perc_input', label = 'Takeaway energy percentage',
+                                                            min = 0, max = 100, value = c(0,100), step = 1)
+                                              )
+                                          )
+                                        )
+                                 )
                                ),
+                            fluidRow(
                               conditionalPanel(
                                 condition = "input.type_constraints_input == 'Load your own data'",
                                 tabsetPanel(
-                                  food_constraints_tab,
-                                  food_group_constraints_tab,
-                                  nutrient_constraints_tab,
+                                  id = "tabset_select_profile",
+                                  food_constraints_select_tab,
+                                  food_group_constraints_select_tab,
+                                  nutrient_constraints_select_tab,
+                                )
+                              ),
+                              conditionalPanel(
+                                condition = "input.type_constraints_input == 'Pre-loaded profiles'",
+                                column(width = 9,
+                                       tabsetPanel(
+                                         id = "tabset_pre_profile",
+                                         food_constraints_pre_tab,
+                                         food_group_constraints_pre_tab,
+                                         nutrient_constraints_pre_tab,
+                                       ))
+
+                                
+
+                              ),
+                              conditionalPanel(
+                                condition = "(input.type_constraints_input == 'Load your own data' && input.tabset_select_profile == 'Nutrient constraints')||(input.type_constraints_input == 'Pre-loaded profiles' && input.tabset_pre_profile == 'Nutrient constraints')",
+                                tags$h3(span(HTML('Nutrients'), style = 'padding-left:15px')),
+                                column(width = 3,
+                                       box(
+                                         width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                         checkboxGroupInput(
+                                           "nutrient_columns_input",
+                                           label = NULL,
+                                           choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)'),
+                                           selected = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
+                                         ),
+                                         br(),
+                                         br()
+                                       )
                                 )
                               )
+                              
+                            )
+
                               
 )
 
@@ -337,6 +489,9 @@ ui <- navbarPage(title = 'DIETCOST',
 server <- function(input, output, session){
   options(shiny.maxRequestSize=10*1024^2)
   data <- reactive(foods_df)
+  data2 <- reactive(food_constraints_df)
+  data3 <- reactive(food_group_constraints_df)
+  data4 <- reactive(nutrient_targets_df)
   
   food_ids <- reactiveValues(ids = list(alcohol = food_server('alcohol', 'Alcohol'), 
                                         beverages = food_server('beverages', 'Beverages'),
@@ -350,6 +505,63 @@ server <- function(input, output, session){
                                         takeaway = food_server('takeaway', 'Takeaway'),
                                         vegetables = food_server('vegetables', 'Vegetables')))
 
+  
+  min_groups <- reactive(list(alcohol = input$slider_alcohol_perc_input[1],
+                                             discretionary = input$slider_discretionary_perc_input[1],
+                                             takeaway = input$slider_takeaway_perc_input[1]))
+  
+  max_groups <- reactive(list(alcohol = input$slider_alcohol_perc_input[2],
+                                             discretionary = input$slider_discretionary_perc_input[2],
+                                             takeaway = input$slider_takeaway_perc_input[2]))
+  
+  choices <- reactive(list(load_type = input$type_constraints_input,
+                            foods = switch (input$person_profiles_input,
+                                                                           '45-years old man' = {c('man_min', 'man_max')},
+                                                                           '37-years old woman' = {c('woman_min', 'woman_max')},
+                                                                           '12-years old boy' = {c('boy_min', 'boy_max')},
+                                                                           '8-years old girl' = {c('girl_min', 'girl_max')}),
+                           food_groups = switch (input$person_profiles_input,
+                                                 '45-years old man' = {c('man_min_g', 'man_max_g', 'man_min_serve', 'man_max_serve')},
+                                                 '37-years old woman' = {c('woman_min_g', 'woman_max_g', 'woman_min_serve', 'woman_max_serve')},
+                                                 '12-years old boy' = {c('boy_min_g', 'boy_max_g', 'boy_min_serve', 'boy_max_serve')},
+                                                 '8-years old girl' = {c('girl_min_g', 'girl_max_g', 'girl_min_serve', 'girl_max_serve')}),
+                           nutrient_targets = switch(input$person_profiles_input,
+                                                     '45-years old man' = 'man',
+                                                     '37-years old woman' = 'woman',
+                                                     '12-years old boy' = 'boy',
+                                                     '8-years old girl' = 'girl'),
+                                          plan = switch(input$diet_profiles_input,
+                                                                      'Current' = 'C',
+                                                                      'EAT-Lancet' = 'PF',
+                                                                      'Healthy' = 'H')
+                                          
+  ))
+  
+  nutrient_cols <- reactive({
+    ec <- ef <- esf <- echo <- es <- efib <- ep <- esod <- epperc <-  esfperc <-  efperc <-  echoperc <-  em <-  esperc <-  eaperc <-  edperc <-  etperc <- NULL
+    for(i in 1:length(input$nutrient_columns_input)){
+      switch(input$nutrient_columns_input[i],
+             'Energy' = {ec <- c('energy_mj_min', 'energy_mj_max')}, 
+             'Fat' = {ef <- c('fat_grams_min', 'fat_grams_max')}, 
+             'Saturated fat' = {esf <- c('sat_fat_grams_min', 'sat_fat_grams_max')},
+             'Carbohydrates' = {echo <- c('CHO_grams_min', 'CHO_grams_max')}, 
+             'Sugars'= {es <- c('sugars_grams_min', 'sugars_grams_max')}, 
+             'Fibre' = {efib <- c('fibre_grams_min', 'fibre_grams_max')}, 
+             'Protein' = {ep <- c('protein_grams_min', 'protein_grams_max')}, 
+             'Sodium' = {esod <- c('sodium_mgrams_min', 'sodium_mgrams_max')},
+             'Protein (%)' = {epperc <- c('protein_perc_min', 'protein_perc_max')},
+             'Saturated fat (%)' = {esfperc <- c('sat_fat_perc_min', 'sat_fat_perc_max')},
+             'Fat (%)' = {efperc <- c('fat_perc_min', 'fat_perc_max')},
+             'Carbohydrates (%)' = {echoperc <- c('CHO_perc_min', 'CHO_perc_max')},
+             'Red meat' = {em <- c('redmeat_grams_min', 'redmeat_grams_max')},
+             'Sugars (%)' = {esperc <- c('sugars_perc_min', 'sugars_perc_max')},
+             'Alcohol (%)' = {eaperc <- c('alcohol_perc_min', 'alcohol_perc_max')},
+             'Discretionary (%)' = {edperc <- c('discretionary_perc_min', 'discretionary_perc_max')},
+             'Takeaway (%)' = {etperc <- c('takeaway_perc_min', 'takeaway_perc_max')},
+      )
+    }
+    c(ec, ef, esf, es, efib, ep, esod, epperc, esfperc, efperc, echoperc, em, esperc, eaperc, edperc, etperc)
+  })
 
   df1 <- reactive({
     if(input$type_food_insert_input == 'Assemble food data from our database'){
@@ -375,6 +587,27 @@ server <- function(input, output, session){
       }
  
 
+  })
+  
+  df2 <- reactive({
+    if(input$type_constraints_input == 'Pre-loaded profiles'){
+      columns <- c('food_group', 'food_name', 'food_id', 'serve_size', choices()$foods)
+      data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
+    }
+  })
+  
+  df3 <- reactive({
+    if(input$type_constraints_input == 'Pre-loaded profiles'){
+      columns <- c('food_group', choices()$food_groups)
+      data3() %>% filter(food_group %in% unique(df1()$food_group) & diet == choices()$plan) %>% select(all_of(columns))
+    }
+  })
+  
+  df4 <- reactive({
+    if(input$type_constraints_input == 'Pre-loaded profiles'){
+      #columns <- c('energy_mj_min','energy_mj_max','fat_grams_min','fat_grams_max','sat_fat_grams_min','sat_fat_grams_max','CHO_grams_min','CHO_grams_max','sugars_grams_min','sugars_grams_max','fibre_grams_min','fibre_grams_max','protein_grams_min','protein_grams_max','sodium_mgrams_min','sodium_mgrams_max','protein_perc_min','protein_perc_max','sat_fat_perc_min','sat_fat_perc_max','fat_perc_min','fat_perc_max','CHO_perc_min','CHO_perc_max','redmeat_grams_min','redmeat_grams_max','sugars_perc_min','sugars_perc_max','alcohol_perc_min','alcohol_perc_max','discretionary_perc_min','discretionary_perc_max','takeaway_perc_min','takeaway_perc_max')
+      data4() %>% filter(diet == choices()$plan & individual == choices()$nutrient_targets) %>% select(all_of(nutrient_cols()))
+    }
   })
   
   observe({
@@ -495,6 +728,23 @@ server <- function(input, output, session){
     }
 
   )
+
+  observeEvent(
+    input$nutrient_columns_input,
+    {
+      runjs(
+        "
+          $(document).ready(function(){
+            $('input[name=nutrient_columns_input]').on('click', function(event){
+              if($('input[name=nutrient_columns_input]:checked').length == 0){
+                $(this).prop('checked', true);
+              }
+            });
+          });
+            "
+      )
+    }
+  )
   
   output$food_data_model <- downloadHandler(
     filename = 'food_data_model.xlsx',
@@ -503,7 +753,7 @@ server <- function(input, output, session){
     }
   )
   
-  output$servesOutput <- renderUI({
+  output$servesSelectOutput <- renderUI({
     fluidRow(
       column(width = 4,
              box(
@@ -527,6 +777,58 @@ server <- function(input, output, session){
 
     )
 
+  })
+  
+
+  
+  output$servesPreOutput <- DT::renderDataTable(
+    datatable(
+      df2(),
+      colnames = c('Food group', 'Food name', 'ID','Serve size (g)', 'Minimum intake (g)', 'Maximum intake (g)'),
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
+  )
+  
+  output$groupsPreOutput <- DT::renderDataTable(
+    datatable(
+      df3(),
+      colnames = c('Food group', 'Minimum intake (g)', 'Maximum intake (g)', 'Minimum serves', 'Maximum serves'),
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
+  )
+
+
+  output$nutrientsPreOutput <- DT::renderDataTable({
+    df_n <- df4()
+    if('discretionary_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
+      df_n$discretionary_perc_min <- min_groups()$discretionary
+      df_n$discretionary_perc_max <- max_groups()$discretionary
+    }
+    if('alcohol_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
+      df_n$alcohol_perc_min <- min_groups()$alcohol
+      df_n$alcohol_perc_max <- max_groups()$alcohol
+    }
+    if('takeaway_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
+      df_n$takeaway_perc_min <- min_groups()$takeaway
+      df_n$takeaway_perc_max <- max_groups()$takeaway
+    }
+    
+    df4 <- reactive(df_n)
+    #df4()$energy_mj_min <- df4()$energy_mj_min*1000
+    #df4()$energy_mj_max <- df4()$energy_mj_max*1000
+    #names(df4())[names(df4()) == 'energy_mj_min'] <- 'energy_kj_min'
+    #names(df4())[names(df4()) == 'energy_mj_max'] <- 'energy_kj_max'
+    datatable(
+      df4(),
+      colnames = unlist(lapply(names(df4()), nutritentsTableName)),
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
   })
 
 }
