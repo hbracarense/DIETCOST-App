@@ -57,6 +57,30 @@ nutritentsTableName <- function(col_name){
          )
 }
 
+tabSelectFunction <- function(food_group_name, df){
+  df_foods <- df %>% filter(food_group == food_group_name)
+  tabPanel(food_group_name,
+           box(
+             width = 12, solidHeader = FALSE,
+             lapply(1:nrow(df_foods), function(i) {
+               
+               fixedRow(
+                 column(width = 8,
+                        sliderInput(inputId = paste0('slider_',df_foods$food_id[i]), label = paste0(df_foods$food_name[i]),
+                                    min = 0, max = 2000, value = c(0,2000), step = 50)),
+                 column(width = 4,
+                        br(),
+                        numericInput(inputId = paste0('numeric_',df_foods$food_id[i]), label = 'Serve size (g)',
+                                     min = 0, max = 2000, value = 0)
+                 )
+                 
+               )
+             })
+             
+           )
+           
+  )
+}
 
 #Modules------------------------------------------------------------------------
 
@@ -294,14 +318,18 @@ foods_tab <- tabPanel('Foods',
 #Food constraints
 food_constraints_select_tab <- tabPanel('Food constraints',
                             useShinyjs(),
-                            uiOutput('servesSelectOutput')
+                            fluidRow(
+                              column(width = 8, 
+                                    uiOutput('servesSelectOutput'))
+                            )
+                            
                             )
 
-food_constraints_pre_tab <- tabPanel('Food constraints',
-                                        useShinyjs(),
-                                        DTOutput('servesPreOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+#food_constraints_pre_tab <- tabPanel('Food constraints',
+#                                        useShinyjs(),
+#                                        DTOutput('servesPreOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
                                        
-)
+#)
 
 #Food group constraints
 food_group_constraints_select_tab <- tabPanel('Food group constraints',
@@ -403,41 +431,44 @@ constraint_tabs <- tabPanel('Constraints',
                                 tabsetPanel(
                                   id = "tabset_select_profile",
                                   food_constraints_select_tab,
-                                  food_group_constraints_select_tab,
-                                  nutrient_constraints_select_tab,
+                                  #food_group_constraints_select_tab,
+                                  #nutrient_constraints_select_tab,
                                 )
                               ),
-                              conditionalPanel(
-                                condition = "input.type_constraints_input == 'Pre-loaded profiles'",
-                                column(width = 9,
-                                       tabsetPanel(
-                                         id = "tabset_pre_profile",
-                                         food_constraints_pre_tab,
-                                         food_group_constraints_pre_tab,
-                                         nutrient_constraints_pre_tab,
-                                       ))
+                              #conditionalPanel(
+                                #condition = "input.type_constraints_input == 'Pre-loaded profiles'",
+                                #column(width = 9,
+                                      # tabsetPanel(
+                                        # id = "tabset_pre_profile",
+                                         #food_constraints_pre_tab,
+                                         #food_group_constraints_pre_tab,
+                                         #nutrient_constraints_pre_tab,
+                                       #))
 
                                 
 
-                              ),
-                              conditionalPanel(
-                                condition = "(input.type_constraints_input == 'Load your own data' && input.tabset_select_profile == 'Nutrient constraints')||(input.type_constraints_input == 'Pre-loaded profiles' && input.tabset_pre_profile == 'Nutrient constraints')",
-                                tags$h3(span(HTML('Nutrients'), style = 'padding-left:15px')),
-                                column(width = 3,
-                                       box(
-                                         width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                         checkboxGroupInput(
-                                           "nutrient_columns_input",
-                                           label = NULL,
-                                           choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)'),
-                                           selected = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
-                                         ),
-                                         br(),
-                                         br()
-                                       )
-                                )
-                              )
+                              #),
+                              #conditionalPanel(
+                                #condition = "(input.type_constraints_input == 'Load your own data' && input.tabset_select_profile == 'Nutrient constraints')||(input.type_constraints_input == 'Pre-loaded profiles' && input.tabset_pre_profile == 'Nutrient constraints')",
+                                #tags$h3(span(HTML('Nutrients'), style = 'padding-left:15px')),
+                                #column(width = 3,
+                                 #      box(
+                                  #       width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                  #       checkboxGroupInput(
+                                  #         "nutrient_columns_input",
+                                  #         label = NULL,
+                                  #         choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)'),
+                                  #         selected = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
+                                  #       ),
+                                   #      br(),
+                                    #     br()
+                                      # )
+                                #)
+                              #)
                               
+                            ),
+                            fluidRow(
+                              DTOutput('teste'),style = "overflow-y: scroll;overflow-x: scroll;"
                             )
 
                               
@@ -564,6 +595,21 @@ server <- function(input, output, session){
     }
     c(ec, ef, esf, es, efib, ep, esod, epperc, esfperc, efperc, echoperc, em, esperc, eaperc, edperc, etperc)
   })
+  
+  restriction_values <- reactive({
+    c('food_group', 'food_name', 'food_id', 'serve_size', 'min_g', 'max_g')
+    df_r <- data.frame(food_group = df1()$food_group,
+                       food_name = df1()$food_name,
+                       food_id = df1()$food_id)
+    df_r$max_g <- df_r$min_g <- df_r$serve_size <- double(nrow(df1()))
+
+    for(i in 1:nrow(df_r)){
+      df_r$serve_size[i] <- coalesce(input[[paste0('numeric_', df_r$food_id[i])]],0)
+      df_r$min_g[i] <- coalesce(input[[paste0('slider_', df_r$food_id[i])]][1], 0)
+      df_r$max_g[i] <- coalesce(input[[paste0('slider_', df_r$food_id[i])]][2], 2000)
+    }
+    df_r
+  })
 
   df1 <- reactive({
     if(input$type_food_insert_input == 'Assemble food data from our database'){
@@ -591,10 +637,23 @@ server <- function(input, output, session){
 
   })
   
+  output$teste <- renderPrint({
+    box({
+      text <- list()
+      for(i in 1:nrow(df1())){
+        text <- append(text, list(paste0(input[[paste0('numeric_', df1()$food_id[i])]], ", ", input[[paste0('slider_', df1()$food_id[i])]][1], ", ", input[[paste0('slider_', df1()$food_id[i])]][2])))
+      }
+      text
+    })
+
+  })
+  
   df2 <- reactive({
     if(input$type_constraints_input == 'Pre-loaded profiles'){
       columns <- c('food_group', 'food_name', 'food_id', 'serve_size', choices()$foods)
       data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
+    } else{
+      restriction_values()
     }
   })
   
@@ -755,355 +814,54 @@ server <- function(input, output, session){
       file.copy('www/food_data_model.xlsx',file)
     }
   )
-  
-  output$foodGroupsSelected <- reactive({
-    unique(df1()$food_group)
-  })
+
+
   
   output$servesSelectOutput <- renderUI({
-    da <- df1() %>% filter(food_group == 'Alcohol')
-    db <- df1() %>% filter(food_group == 'Beverages')
-    dda <- df1() %>% filter(food_group == 'Dairy/alternatives')
-    ddf <- df1() %>% filter(food_group == 'Discretionary foods')
-    dfa <- df1() %>% filter(food_group == 'Fats/oils')
-    dfr <- df1() %>% filter(food_group == 'Fruit')
-    dg <- df1() %>% filter(food_group == 'Grains')
-    dpf <- df1() %>% filter(food_group == 'Protein foods')
-    dss <- df1() %>% filter(food_group == 'Sauces/sugars')
-    dsv <- df1() %>% filter(food_group == 'Starchy vegetables')
-    dt <- df1() %>% filter(food_group == 'Takeaway')
-    dv <- df1() %>% filter(food_group == 'Vegetables')
-    
-    fluidRow(
-      column(width = 8,
-             tabsetPanel(
-               tabPanel("Alcohol",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Alcohol') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(da), function(i) {
-                              sliderInput(inputId = paste0('slider_',da$food_name[i]), label = paste0(da$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Alcohol') <= -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            br(),
-                            br(),
-                            p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                          )
-                          
-                        )
-                        
-               ),
-               
-                  tabPanel("Beverages",
-                    conditionalPanel(
-                      condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Beverages') > -1",
-                      box(
-                        width = 12, solidHeader = FALSE,
-                        lapply(1:nrow(db), function(i) {
-                          sliderInput(inputId = paste0('slider_',db$food_name[i]), label = paste0(db$food_name[i]),
-                                      min = 0, max = 2000, value = c(0,2000), step = 50)
-                        })
-                        
-                      )
-                    ),
-                    conditionalPanel(
-                      condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Beverages') <= -1",
-                      box(
-                        width = 12, solidHeader = FALSE,
-                        br(),
-                        br(),
-                        p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                      )
-                      
-                    )
-                    
-                  ),
-               
-               tabPanel("Dairy/alternatives",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Dairy/alternatives') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(dda), function(i) {
-                              sliderInput(inputId = paste0('slider_',dda$food_name[i]), label = paste0(dda$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Dairy/alternatives') <= -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            br(),
-                            br(),
-                            p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                          )
-                          
-                        )
-                        
-               ),
-               tabPanel("Discretionary foods",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Discretionary foods') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(ddf), function(i) {
-                              sliderInput(inputId = paste0('slider_',ddf$food_name[i]), label = paste0(ddf$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Discretionary foods') <= -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            br(),
-                            br(),
-                            p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                          )
-                          
-                        )
-                        
-               ),
-               tabPanel("Fats/oils",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Fats/oils') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(dfa), function(i) {
-                              sliderInput(inputId = paste0('slider_',dfa$food_name[i]), label = paste0(dfa$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Fats/oils') <= -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            br(),
-                            br(),
-                            p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                          )
-                          
-                        )
-                        
-               ),
-               
-                  tabPanel("Fruits",
-                           conditionalPanel(
-                             condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Fruit') > -1",
-                             box(
-                               width = 12, solidHeader = FALSE,
-                               lapply(1:nrow(dfr), function(i) {
-                                 sliderInput(inputId = paste0('slider_',dfr$food_name[i]), label = paste0(dfr$food_name[i]),
-                                             min = 0, max = 2000, value = c(0,2000), step = 50)
-                               })
-                               
-                             )
-                           ),
-                           conditionalPanel(
-                             condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Fruit') <= -1",
-                               box(
-                                 width = 12, solidHeader = FALSE,
-                                 br(),
-                                 br(),
-                                 p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                               )
-                               
-                           )
-                           
-                  ),
-               tabPanel("Grains",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Grains') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(dg), function(i) {
-                              sliderInput(inputId = paste0('slider_',dg$food_name[i]), label = paste0(dg$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Grains') <= -1",
-                            box(
-                              width = 12, solidHeader = FALSE,
-                              br(),
-                              br(),
-                              p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                            )
-                            
-                        )
-                        
-               ),
-               tabPanel("Protein foods",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Protein foods') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(dpf), function(i) {
-                              sliderInput(inputId = paste0('slider_',dpf$food_name[i]), label = paste0(dpf$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Protein foods') <= -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            br(),
-                            br(),
-                            p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                          )
-                          
-                        )
-                        
-               ),
-               tabPanel("Sauces/sugars",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Sauces/sugars') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(dss), function(i) {
-                              sliderInput(inputId = paste0('slider_',dss$food_name[i]), label = paste0(dss$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Sauces/sugars') <= -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            br(),
-                            br(),
-                            p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                          )
-                          
-                        )
-                        
-               ),
-               tabPanel("Starchy vegetables",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Starchy vegetables') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(dsv), function(i) {
-                              sliderInput(inputId = paste0('slider_',dsv$food_name[i]), label = paste0(dsv$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Starchy vegetables') <= -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            br(),
-                            br(),
-                            p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                          )
-                          
-                        )
-                        
-               ),
-               tabPanel("Takeaway",
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Takeaway') > -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            lapply(1:nrow(dt), function(i) {
-                              sliderInput(inputId = paste0('slider_',dt$food_name[i]), label = paste0(dt$food_name[i]),
-                                          min = 0, max = 2000, value = c(0,2000), step = 50)
-                            })
-                            
-                          )
-                        ),
-                        conditionalPanel(
-                          condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Takeaway') <= -1",
-                          box(
-                            width = 12, solidHeader = FALSE,
-                            br(),
-                            br(),
-                            p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                          )
-                          
-                        )
-                        
-               ),
-                  tabPanel("Vegetables",
-                           conditionalPanel(
-                             condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Vegetables') > -1",
-                             box(
-                               width = 12, solidHeader = FALSE,
-                               lapply(1:nrow(dv), function(i) {
-                                 sliderInput(inputId = paste0('slider_',dv$food_name[i]), label = paste0(dv$food_name[i]),
-                                             min = 0, max = 2000, value = c(0,2000), step = 50)
-                               })
-                               
-                             )
-                           ),
-                           conditionalPanel(
-                             condition = "output.foodGroupsSelected && output.foodGroupsSelected.indexOf('Vegetables') <= -1",
-                               box(
-                                 width = 12, solidHeader = FALSE,
-                                 br(),
-                                 br(),
-                                 p("No foods selected in this food group!", style ="text-align: center;", style = "color: black;", style = "font-size:18px;"),
-                               )
-                               
-                           )
-                           
-                           )
-                  
-                  
-                )
-
-             )
-
-             )
+    tabs <- lapply(sort(unique(df1()$food_group)), tabSelectFunction, df = df1())
+    do.call(tabsetPanel, tabs)
 
 
   })
   
-
-  
-  output$servesPreOutput <- DT::renderDataTable(
-    datatable(
+  output$teste <- DT::renderDataTable({
+     datatable(
       df2(),
-      colnames = c('Food group', 'Food name', 'ID','Serve size (g)', 'Minimum intake (g)', 'Maximum intake (g)'),
       selection = 'none',
       rownames = FALSE,
-      width = '80%'
+      width = '50%'
     )
-  )
+  })
   
-  output$groupsPreOutput <- DT::renderDataTable(
+  
+  
+  #output$servesPreOutput <- DT::renderDataTable({
+  #  df_f <- data.frame(df2())
+  #  colnames(df_f) <- c('food_group', 'food_name', 'food_id', 'serve_size', 'min_g', 'max_g')
+  #  datatable(
+  #    df_f,
+  #    colnames = c('Food group', 'Food name', 'ID','Serve size (g)', 'Minimum intake (g)', 'Maximum intake (g)'),
+  #    selection = 'none',
+  #    rownames = FALSE,
+  #    width = '80%'
+  #  )
+  #})
+  
+  output$groupsPreOutput <- DT::renderDataTable({
+    df_fg <- data.frame(df3())
+    colnames(df_fg) <- c('food_group', 'min_g', 'max_g', 'min_serve', 'max_serve')
     datatable(
-      df3(),
+      df_fg,
       colnames = c('Food group', 'Minimum intake (g)', 'Maximum intake (g)', 'Minimum serves', 'Maximum serves'),
       selection = 'none',
       rownames = FALSE,
       width = '80%'
     )
-  )
+  })
 
 
   output$nutrientsPreOutput <- DT::renderDataTable({
-    df_n <- df4()
+    df_n <- data.frame(df4())
     if('discretionary_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
       df_n$discretionary_perc_min <- min_groups()$discretionary
       df_n$discretionary_perc_max <- max_groups()$discretionary
@@ -1117,20 +875,19 @@ server <- function(input, output, session){
       df_n$takeaway_perc_max <- max_groups()$takeaway
     }
     
-    df4 <- reactive(df_n)
     #df4()$energy_mj_min <- df4()$energy_mj_min*1000
     #df4()$energy_mj_max <- df4()$energy_mj_max*1000
     #names(df4())[names(df4()) == 'energy_mj_min'] <- 'energy_kj_min'
     #names(df4())[names(df4()) == 'energy_mj_max'] <- 'energy_kj_max'
     datatable(
-      df4(),
-      colnames = unlist(lapply(names(df4()), nutritentsTableName)),
+      df_n,
+      colnames = unlist(lapply(names(df_n), nutritentsTableName)),
       selection = 'none',
       rownames = FALSE,
       width = '80%'
     )
   })
-  outputOptions(output, "foodGroupsSelected", suspendWhenHidden = FALSE)
+
 }
 
 #App creation-------------------------------------------------------------------
