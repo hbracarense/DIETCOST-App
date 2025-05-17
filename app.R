@@ -17,6 +17,50 @@ food_constraints_df <- read_excel('data.xlsx', sheet = 'food_constraints')
 food_group_constraints_df <- read_excel('data.xlsx', sheet = 'food_group_constraints')
 nutrient_targets_df <- read_excel('data.xlsx', sheet = 'nutrient_targets')
 
+#Global variables---------------------------------------------------------------
+min_grams_food <- round(min(food_constraints_df[,c('man_min', 'woman_min', 'boy_min', 'girl_min')]),0)
+max_grams_food <- round(max(food_constraints_df[,c('man_max', 'woman_max', 'boy_max', 'girl_max')]),0)
+min_serve_size <- round(min(food_constraints_df$serve_size),0)
+max_serve_size <- round(max(food_constraints_df$serve_size),0)
+min_grams_food_group <- round(min(food_group_constraints_df[,c('man_min_g', 'woman_min_g', 'boy_min_g', 'girl_min_g')]),0)
+max_grams_food_group <- round(max(food_group_constraints_df[,c('man_max_g', 'woman_max_g', 'boy_max_g', 'girl_max_g')]),0)
+min_serves <- round(min(food_group_constraints_df[,c('man_min_serve', 'woman_min_serve', 'boy_min_serve', 'girl_min_serve')]),0)
+max_serves <- round(max(food_group_constraints_df[,c('man_max_serve', 'woman_max_serve', 'boy_max_serve', 'girl_max_serve')]),0)
+min_energy <- round(min(nutrient_targets_df$energy_mj_min),0)
+max_energy <- round(max(nutrient_targets_df$energy_mj_max),0)
+min_fat <- round(max(nutrient_targets_df$fat_grams_min),0)
+max_fat <- round(max(nutrient_targets_df$fat_grams_max),0)
+min_sat_fat <- round(max(nutrient_targets_df$sat_fat_grams_min),0)
+max_sat_fat <- round(max(nutrient_targets_df$sat_fat_grams_max),0)
+min_CHO <- round(max(nutrient_targets_df$CHO_grams_min),0)
+max_CHO <- round(max(nutrient_targets_df$CHO_grams_max),0)
+min_sugars <- round(max(nutrient_targets_df$sugars_grams_min),0)
+max_sugars <- round(max(nutrient_targets_df$sugars_grams_max),0)
+min_fibre <- round(max(nutrient_targets_df$fibre_grams_min),0)
+max_fibre <- round(max(nutrient_targets_df$fibre_grams_max),0)
+min_protein <- round(max(nutrient_targets_df$protein_grams_min),0)
+max_protein <- round(max(nutrient_targets_df$protein_grams_max),0)
+min_sodium <- round(max(nutrient_targets_df$sodium_mgrams_min),0)
+max_sodium <- round(max(nutrient_targets_df$sodium_mgrams_max),0)
+min_protein_perc <- round(max(nutrient_targets_df$protein_perc_min),0)
+max_protein_perc <- round(max(nutrient_targets_df$protein_perc_max),0)
+min_sat_fat_perc <- round(max(nutrient_targets_df$sat_fat_perc_min),0)
+max_sat_fat_perc <- round(max(nutrient_targets_df$sat_fat_perc_max),0)
+min_fat_perc <- round(max(nutrient_targets_df$fat_perc_min),0)
+max_fat_perc <- round(max(nutrient_targets_df$fat_perc_max),0)
+min_CHO_perc <- round(max(nutrient_targets_df$CHO_perc_min),0)
+max_CHO_perc <- round(max(nutrient_targets_df$CHO_perc_max),0)
+min_redmeat <- round(max(nutrient_targets_df$redmeat_grams_min),0)
+max_redmeat <- round(max(nutrient_targets_df$redmeat_grams_max),0)
+min_sugars_perc <- round(max(nutrient_targets_df$sugars_perc_min),0)
+max_sugars_perc <- round(max(nutrient_targets_df$sugars_perc_max),0)
+min_alcohol_perc <- 0
+max_alcohol_perc <- 100
+min_discretionary_perc <- 0
+max_discretionary_perc <- 100
+min_takeaway_perc <- 0
+max_takeaway_perc <- 100
+
 #Functions----------------------------------------------------------------------
 nutritentsTableName <- function(col_name){
   switch(col_name,
@@ -65,7 +109,7 @@ transposeNutrientsTable <- function(df){
   for(i in 1:ncol(df)){
     if(i %% 2 == 0) next else{
       switch(colnames(df)[i],
-             'energy_mj_min' = {n <- 'energy_kj'
+             'energy_mj_min' = {n <- 'energy_mj'
                                min_val <- df$energy_mj_min
                                max_val <- df$energy_mj_max},
              
@@ -134,11 +178,11 @@ tabSelectFoodFunction <- function(food_group_name, df){
                fixedRow(
                  column(width = 8,
                         sliderInput(inputId = paste0('slider_food_',df_foods$food_id[i]), label = paste0(df_foods$food_name[i]),
-                                    min = 0, max = 2000, value = c(0,2000), step = 50)),
+                                    min = min_grams_food, max = max_grams_food, value = c(min_grams_food,max_grams_food), step = 50)),
                  column(width = 4,
                         br(),
                         numericInput(inputId = paste0('numeric_food_',df_foods$food_id[i]), label = 'Serve size (g)',
-                                     min = 0, max = 2000, value = 0)
+                                     min = min_serve_size, max = max_serve_size, value = min_serve_size)
                  )
                  
                )
@@ -154,13 +198,113 @@ tabSelectFoodGroupFunction <- function(food_group){
     tags$h4(span(HTML(paste("<b>",food_group,"</b>")), style = 'padding-left:15px')),
     column(width = 6,
            sliderInput(inputId = paste0('slider_food_group_g_',food_group), label = "Intake (g)",
-                       min = 0, max = 5000, value = c(0,5000), step = 50)),
+                       min = min_grams_food_group, max = max_grams_food_group, value = c(min_grams_food_group,max_grams_food_group), step = 50)),
     column(width = 6,
            sliderInput(inputId = paste0('slider_food_group_s_',food_group), label = "Serves",
-                       min = 0, max = 50, value = c(0,50), step = 5)
+                       min = min_serves, max = max_serves, value = c(min_serves,max_serves), step = 5)
     )
     
   )
+}
+
+tabSelectNutrientFunction <- function(nutrient){
+  switch(nutrient,
+         'Energy' = {n = paste(nutrient, '(kJ)')
+                     n_min = min_energy
+                     n_max = max_energy},
+         'Fat' = {n = paste(nutrient, '(g)')
+                   n_min = min_fat
+                   n_max = max_fat}, 
+         'Saturated fat' = {n = paste(nutrient, '(g)')
+                           n_min = min_sat_fat
+                           n_max = max_sat_fat}, 
+         'Carbohydrates' = {n = paste(nutrient, '(g)')
+                             n_min = min_CHO
+                             n_max = max_CHO},
+         'Sugars'  = {n = paste(nutrient, '(g)')
+                       n_min = min_sugars
+                       n_max = max_sugars},
+         'Fibre' = {n = paste(nutrient, '(g)')
+                     n_min = min_fibre
+                     n_max = max_fibre},
+         'Protein' = {n = paste(nutrient, '(g)')
+                     n_min = min_protein
+                     n_max = max_protein},
+         'Sodium' = {n = paste(nutrient, '(mg)')
+                     n_min = min_sodium
+                     n_max = max_sodium},
+         'Fat (%)' = {n = nutrient
+                     n_min = min_fat_perc
+                     n_max = max_fat_perc},
+         'Saturated fat (%)'= {n = nutrient
+                               n_min = min_sat_fat_perc
+                               n_max = max_sat_fat_perc},
+         'Carbohydrates (%)' = {n = nutrient
+                               n_min = min_CHO_perc
+                               n_max = max_CHO_perc},
+         'Sugars (%)' = {n = nutrient
+                         n_min = min_sugars_perc
+                         n_max = max_sugars_perc},
+         'Protein (%)' = {n = nutrient
+                         n_min = min_protein_perc
+                         n_max = max_protein_perc},
+         'Red meat'  = {n = paste(nutrient, '(g)')
+                         n_min = min_redmeat
+                         n_max = max_redmeat},
+         'Alcohol (%)'  = {n = nutrient
+                           n_min = min_alcohol_perc
+                           n_max = max_alcohol_perc},
+         'Discretionary (%)'  = {n = nutrient
+                                 n_min = min_discretionary_perc
+                                 n_max = max_discretionary_perc},
+         'Takeaway (%)'  = {n = nutrient
+                           n_min = min_takeaway_perc
+                           n_max = max_takeaway_perc}
+         )
+
+  sliderInput(inputId = paste0('slider_nutrient_',nutrient), label = n,
+              min = n_min, max = n_max, value = c(n_min,n_max), step = 1)
+  
+}
+
+changeNamesNutrientTable <- function(x){
+  if(x == 'energy_mj'){
+    y <- 'Energy (MJ)'
+  } else if(x == 'fat_g'){
+    y <- 'Fat (g)'
+  } else if(x == 'sat_fat_g'){
+    y <- 'Saturated fat (g)'
+  } else if(x == 'CHO_g'){
+    y <- 'CHO (g)'
+  } else if(x == 'sugars_g'){
+    y <- 'Sugars (g)'
+  } else if(x == 'sodium_mg'){
+    y <- 'Sodium (mg)'
+  } else if(x == 'fibre_g'){
+    y <- 'Fibre (g)'
+  } else if(x == 'protein_g'){
+    y <- 'Protein (g)'
+  } else if(x == 'protein_perc'){
+    y <- 'Protein (%)'
+  } else if(x == 'fat_perc'){
+    y <- 'Fat (%)'
+  } else if(x == 'sat_fat_perc'){
+    y <- 'Saturated fat (%)'
+  } else if(x == 'CHO_perc'){
+    y <- 'CHO (%)'
+  } else if(x == 'redmeat_g'){
+    y <- 'Red meat (g)'
+  } else if(x == 'sugars_perc'){
+    y <- 'Sugars (%)'
+  } else if(x == 'alcohol_perc'){
+    y <- 'Alcohol (%)'
+  } else if(x == 'discretionary_perc'){
+    y <- 'Discretionary foods (%)'
+  } else{
+    y <- 'Takeaway (%)'
+  }
+  return(y)
+  
 }
 
 #Modules------------------------------------------------------------------------
@@ -201,6 +345,7 @@ food_server <- function(id, group_label){
     return(reactive({data()$food_id[food_values$index()]}))
   })
 }
+
 
 #UI/Tabs------------------------------------------------------------------------
 
@@ -487,17 +632,17 @@ constraint_tabs <- tabPanel('Constraints',
                                               conditionalPanel(
                                                 condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Alcohol (%)') > -1",
                                                 sliderInput(inputId = 'slider_alcohol_perc_input', label = 'Alcohol energy percentage',
-                                                            min = 0, max = 100, value = c(0,100), step = 1)
+                                                            min = min_alcohol_perc, max = max_alcohol_perc, value = c(min_alcohol_perc,max_alcohol_perc), step = 1)
                                               ),
                                               conditionalPanel(
                                                 condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Discretionary (%)') > -1",
                                                 sliderInput(inputId = 'slider_discretionary_perc_input', label = 'Discretionary foods energy percentage',
-                                                            min = 0, max = 100, value = c(0,100), step = 1)
+                                                            min = min_discretionary_perc, max = max_discretionary_perc, value = c(min_discretionary_perc,max_discretionary_perc), step = 1)
                                               ),
                                               conditionalPanel(
                                                 condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Takeaway (%)') > -1",
                                                 sliderInput(inputId = 'slider_takeaway_perc_input', label = 'Takeaway energy percentage',
-                                                            min = 0, max = 100, value = c(0,100), step = 1)
+                                                            min = min_takeaway_perc, max = max_takeaway_perc, value = c(min_takeaway_perc,max_takeaway_perc), step = 1)
                                               )
                                           )
                                         )
@@ -757,9 +902,9 @@ server <- function(input, output, session){
     df_r$max_g <- df_r$min_g <- df_r$serve_size <- double(nrow(df1()))
 
     for(i in 1:nrow(df_r)){
-      df_r$serve_size[i] <- coalesce(input[[paste0('numeric_food_', df_r$food_id[i])]],0)
-      df_r$min_g[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][1], 0)
-      df_r$max_g[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][2], 2000)
+      df_r$serve_size[i] <- coalesce(input[[paste0('numeric_food_', df_r$food_id[i])]],min_serve_size)
+      df_r$min_g[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][1], min_grams_food)
+      df_r$max_g[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][2], max_grams_food)
     }
     df_r
   })
@@ -770,10 +915,40 @@ server <- function(input, output, session){
     df_r$max_serve <- df_r$min_serve <- df_r$max_g <-df_r$min_g <-double(length(food_groups))
     
     for(food_group in food_groups){
-      df_r$min_g[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_g_',food_group)]][1], 0)
-      df_r$max_g[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_g_',food_group)]][2], 5000)
-      df_r$min_serve[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_s_',food_group)]][1], 0)
-      df_r$max_serve[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_s_',food_group)]][2], 50)
+      df_r$min_g[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_g_',food_group)]][1], min_grams_food_group)
+      df_r$max_g[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_g_',food_group)]][2], max_grams_food_group)
+      df_r$min_serve[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_s_',food_group)]][1], min_serves)
+      df_r$max_serve[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_s_',food_group)]][2], max_serves)
+    }
+    df_r
+  })
+  
+  
+  restriction_nutrient_values <- reactive({
+    df_r <- data.frame(nutrient = character(0),
+                       min = double(0),
+                       max = double(0))
+    nutrients <- input$nutrient_columns_input
+    for(nutrient in nutrients){
+      switch(nutrient,
+             'Energy' = {n <- 'energy_kj'},
+             'Fat' = {n <- 'fat_g'},
+             'Saturated fat' = {n <- 'fat_g'},
+             'Carbohydrates' = {n <- 'CHO_g'},
+             'Sugars' = {n <- 'sugars_g'},
+             'Fibre' = {n <- 'fibre_g'},
+             'Protein' = {n <- 'protein_g'},
+             'Sodium' = {n <- 'sodium_mg'},
+             'Fat (%)' = {n <- 'fat_perc'},
+             'Saturated fat (%)' = {n <- 'sat_fat_perc'},
+             'Carbohydrates (%)' = {n <- 'CHO_perc'},
+             'Sugars (%)' = {n <- 'sugars_perc'},
+             'Protein (%)' = {n <- 'protein_perc'},
+             'Red meat' = {n <- 'redmeat_g'},
+             'Alcohol (%)' = {n <- 'alcohol_perc'},
+             'Discretionary (%)' = {n <- 'discretionary_perc'},
+             'Takeaway (%)' = {n <- 'takeaway_perc'})
+      df_r[nrow(df_r)+1,] <- c(n, input[[paste0('slider_nutrient_',nutrient)]][1], input[[paste0('slider_nutrient_',nutrient)]][2])
     }
     df_r
   })
@@ -836,7 +1011,9 @@ server <- function(input, output, session){
   df4 <- reactive({
     if(input$type_constraints_input == 'Pre-loaded profiles'){
       #columns <- c('energy_mj_min','energy_mj_max','fat_grams_min','fat_grams_max','sat_fat_grams_min','sat_fat_grams_max','CHO_grams_min','CHO_grams_max','sugars_grams_min','sugars_grams_max','fibre_grams_min','fibre_grams_max','protein_grams_min','protein_grams_max','sodium_mgrams_min','sodium_mgrams_max','protein_perc_min','protein_perc_max','sat_fat_perc_min','sat_fat_perc_max','fat_perc_min','fat_perc_max','CHO_perc_min','CHO_perc_max','redmeat_grams_min','redmeat_grams_max','sugars_perc_min','sugars_perc_max','alcohol_perc_min','alcohol_perc_max','discretionary_perc_min','discretionary_perc_max','takeaway_perc_min','takeaway_perc_max')
-      data4() %>% filter(diet == choices()$plan & individual == choices()$nutrient_targets) %>% select(all_of(nutrient_cols()))
+      data4() %>% filter(diet == choices()$plan & individual == choices()$nutrient_targets) %>% select(all_of(nutrient_cols())) %>% transposeNutrientsTable()
+    } else{
+      restriction_nutrient_values()
     }
   })
   
@@ -997,7 +1174,11 @@ server <- function(input, output, session){
     lapply(sort(unique(df1()$food_group)), tabSelectFoodGroupFunction) 
   })
   
-
+  output$nutrientsConstraintsSelectOutput <- renderUI({
+    lapply(input$nutrient_columns_input, tabSelectNutrientFunction) 
+  })
+  
+  
   output$foodConstraintsDisplayOutput <- DT::renderDataTable({
     df_f <- data.frame(df2())
     colnames(df_f) <- c('food_group', 'food_name', 'food_id', 'serve_size', 'min_g', 'max_g')
@@ -1024,7 +1205,9 @@ server <- function(input, output, session){
 
 
   output$nutrientsConstraintsDisplayOutput <- DT::renderDataTable({
-    df_n <- transposeNutrientsTable(data.frame(df4()))
+    df_n <- df4()
+    df_n2 <- df_n
+    df_n2$nutrient <- unlist(lapply(df_n2$nutrient, changeNamesNutrientTable))
     #if('discretionary_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
     #  df_n$discretionary_perc_min <- min_groups()$discretionary
     #  df_n$discretionary_perc_max <- max_groups()$discretionary
@@ -1043,8 +1226,8 @@ server <- function(input, output, session){
     #names(df4())[names(df4()) == 'energy_mj_min'] <- 'energy_kj_min'
     #names(df4())[names(df4()) == 'energy_mj_max'] <- 'energy_kj_max'
     datatable(
-      df_n,
-      #colnames = unlist(lapply(names(df_n), nutritentsTableName)),
+      df_n2,
+      colnames = c('Nutrient', 'Minimum', 'Maximum'),
       selection = 'none',
       rownames = FALSE,
       width = '80%'
