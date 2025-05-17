@@ -57,7 +57,74 @@ nutritentsTableName <- function(col_name){
          )
 }
 
-tabSelectFunction <- function(food_group_name, df){
+transposeNutrientsTable <- function(df){
+  df_res <- data.frame(nutrient = character(0),
+                       min = double(0),
+                       max = double(0))
+
+  for(i in 1:ncol(df)){
+    if(i %% 2 == 0) next else{
+      switch(colnames(df)[i],
+             'energy_mj_min' = {n <- 'energy_kj'
+                               min_val <- df$energy_mj_min
+                               max_val <- df$energy_mj_max},
+             
+             'fat_grams_min' = {n <- 'fat_g'
+                               min_val <- df$fat_grams_min
+                               max_val <- df$fat_grams_max},
+             'sat_fat_grams_min' = {n <- 'sat_fat_g'
+                                 min_val <- df$sat_fat_grams_min
+                                 max_val <- df$sat_fat_grams_max},
+             'CHO_grams_min' = {n <- 'CHO_g'
+                                   min_val <- df$CHO_grams_min
+                                   max_val <- df$CHO_grams_max},
+             'sugars_grams_min' = {n <- 'sugars_g'
+                               min_val <- df$sugars_grams_min
+                               max_val <- df$sugars_grams_max},
+             'fibre_grams_min' = {n <- 'fibre_g'
+                                   min_val <- df$fibre_grams_min
+                                   max_val <- df$fibre_grams_max},
+             'protein_grams_min' = {n <- 'protein_g'
+                                 min_val <- df$protein_grams_min
+                                 max_val <- df$protein_grams_max},
+             'sodium_mgrams_min' = {n <- 'sodium_mg'
+                                     min_val <- df$sodium_mgrams_min
+                                     max_val <- df$sodium_mgrams_max},
+             'protein_perc_min' = {n <- 'protein_perc'
+                                   min_val <- df$protein_perc_min
+                                   max_val <- df$protein_perc_max},
+             'sat_fat_perc_min' = {n <- 'sat_fat_perc'
+                                   min_val <- df$sat_fat_perc_min
+                                   max_val <- df$sat_fat_perc_max},
+             'fat_perc_min' = {n <- 'fat_perc'
+                                   min_val <- df$fat_perc_min
+                                   max_val <- df$fat_perc_max},
+             'CHO_perc_min' = {n <- 'CHO_perc'
+                               min_val <- df$CHO_perc_min
+                               max_val <- df$CHO_perc_max},
+             'redmeat_grams_min' = {n <- 'redmeat_g'
+                               min_val <- df$redmeat_grams_min
+                               max_val <- df$redmeat_grams_max},
+             'sugars_perc_min' = {n <- 'sugars_perc'
+                                   min_val <- df$sugars_perc_min
+                                   max_val <- df$sugars_perc_max},
+             'alcohol_perc_min' = {n <- 'alcohol_perc'
+                                   min_val <- df$alcohol_perc_min
+                                   max_val <- df$alcohol_perc_max},
+             'discretionary_perc_min' = {n <- 'discretionary_perc'
+                                   min_val <- df$discretionary_perc_min
+                                   max_val <- df$discretionary_perc_max},
+             'takeaway_perc_min' = {n <- 'takeaway_perc'
+                                         min_val <- df$takeaway_perc_min
+                                         max_val <- df$takeaway_perc_max}
+             )
+    }
+    df_res[nrow(df_res)+1,] <- c(n, min_val, max_val) 
+  }
+  return(df_res)
+}
+
+tabSelectFoodFunction <- function(food_group_name, df){
   df_foods <- df %>% filter(food_group == food_group_name)
   tabPanel(food_group_name,
            box(
@@ -66,11 +133,11 @@ tabSelectFunction <- function(food_group_name, df){
                
                fixedRow(
                  column(width = 8,
-                        sliderInput(inputId = paste0('slider_',df_foods$food_id[i]), label = paste0(df_foods$food_name[i]),
+                        sliderInput(inputId = paste0('slider_food_',df_foods$food_id[i]), label = paste0(df_foods$food_name[i]),
                                     min = 0, max = 2000, value = c(0,2000), step = 50)),
                  column(width = 4,
                         br(),
-                        numericInput(inputId = paste0('numeric_',df_foods$food_id[i]), label = 'Serve size (g)',
+                        numericInput(inputId = paste0('numeric_food_',df_foods$food_id[i]), label = 'Serve size (g)',
                                      min = 0, max = 2000, value = 0)
                  )
                  
@@ -79,6 +146,20 @@ tabSelectFunction <- function(food_group_name, df){
              
            )
            
+  )
+}
+
+tabSelectFoodGroupFunction <- function(food_group){
+  fixedRow(
+    tags$h4(span(HTML(paste("<b>",food_group,"</b>")), style = 'padding-left:15px')),
+    column(width = 6,
+           sliderInput(inputId = paste0('slider_food_group_g_',food_group), label = "Intake (g)",
+                       min = 0, max = 5000, value = c(0,5000), step = 50)),
+    column(width = 6,
+           sliderInput(inputId = paste0('slider_food_group_s_',food_group), label = "Serves",
+                       min = 0, max = 50, value = c(0,50), step = 5)
+    )
+    
   )
 }
 
@@ -318,18 +399,15 @@ foods_tab <- tabPanel('Foods',
 #Food constraints
 food_constraints_select_tab <- tabPanel('Food constraints',
                             useShinyjs(),
-                            fluidRow(
-                              column(width = 8, 
-                                    uiOutput('servesSelectOutput'))
-                            )
+
                             
                             )
 
-#food_constraints_pre_tab <- tabPanel('Food constraints',
-#                                        useShinyjs(),
-#                                        DTOutput('servesPreOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+food_constraints_pre_tab <- tabPanel('Food constraints',
+                                        useShinyjs(),
+                                        DTOutput('foodConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
                                        
-#)
+)
 
 #Food group constraints
 food_group_constraints_select_tab <- tabPanel('Food group constraints',
@@ -338,7 +416,7 @@ food_group_constraints_select_tab <- tabPanel('Food group constraints',
 
 food_group_constraints_pre_tab <- tabPanel('Food group constraints',
                                               useShinyjs(),
-                                           DTOutput('groupsPreOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                           DTOutput('foodGroupConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
 )
 
 #Nutrients constraints
@@ -349,7 +427,7 @@ nutrient_constraints_select_tab <- tabPanel('Nutrient constraints',
 
 nutrient_constraints_pre_tab <- tabPanel('Nutrient constraints',
                                             useShinyjs(),
-                                         DTOutput('nutrientsPreOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                         DTOutput('nutrientsConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
 )
 
 
@@ -402,7 +480,7 @@ constraint_tabs <- tabPanel('Constraints',
                                  ),
                                  column(width = 3,
                                         conditionalPanel(
-                                          condition = "input.type_constraints_input == 'Pre-loaded profiles' && input.diet_profiles_input != 'Healthy' && input.tabset_pre_profile == 'Nutrient constraints' && (input.person_profiles_input == '45-years old man' || input.person_profiles_input == '37-years old woman') && input.nutrient_columns_input && (input.nutrient_columns_input.indexOf('Alcohol (%)') > -1 || input.nutrient_columns_input.indexOf('Discretionary (%)') > -1 || input.nutrient_columns_input.indexOf('Takeaway (%)') > -1)",
+                                          condition = "input.type_constraints_input == 'Pre-loaded profiles' && input.diet_profiles_input != 'Healthy' && input.constraints_panel == 'Nutrient constraints' && (input.person_profiles_input == '45-years old man' || input.person_profiles_input == '37-years old woman') && input.nutrient_columns_input && (input.nutrient_columns_input.indexOf('Alcohol (%)') > -1 || input.nutrient_columns_input.indexOf('Discretionary (%)') > -1 || input.nutrient_columns_input.indexOf('Takeaway (%)') > -1)",
                                           tags$h3(span(HTML('Special groups intake'), style = 'padding-left:15px')),
                                           box(
                                               width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
@@ -426,15 +504,94 @@ constraint_tabs <- tabPanel('Constraints',
                                  )
                                ),
                             fluidRow(
+                              column(width = 9,
+                                     tabsetPanel(id = "constraints_panel",
+                                                 useShinyjs(),
+                                                 tabPanel("Food constraints",
+                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                                              conditionalPanel(
+                                                                condition = "input.type_constraints_input == 'Load your own data'",
+                                                                tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
+                                                                fluidRow(
+                                                                  column(width = 8, 
+                                                                         uiOutput('foodConstraintsSelectOutput'))
+                                                                ),
+                                                                tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                              ),       
+                                                              DTOutput('foodConstraintsDisplayOutput', width = '95%'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                              
+                                                          )
+                                                          
+                                                          
+                                                 ),
+                                                 tabPanel('Food group constraints',
+                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                                              conditionalPanel(
+                                                                condition = "input.type_constraints_input == 'Load your own data'",
+                                                                tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
+                                                                fluidRow(
+                                                                  column(width = 8, 
+                                                                         uiOutput('foodGroupConstraintsSelectOutput'))
+                                                                ),
+                                                                tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                              ),
+                                                              DTOutput('foodGroupConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                          )
+                                                 ),
+                                                 tabPanel("Nutrient constraints",
+                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                                              conditionalPanel(
+                                                                condition = "input.type_constraints_input == 'Load your own data'",
+                                                                tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
+                                                                fluidRow(
+                                                                  column(width = 8, 
+                                                                         uiOutput('nutrientsConstraintsSelectOutput'))
+                                                                ),
+                                                                tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                              ),
+                                                              DTOutput('nutrientsConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                          )
+                                                          
+                                                          
+                                                 )
+                                                 
+                                                 
+                                                 
+                                     )
+                                     
+                                     ),
                               conditionalPanel(
-                                condition = "input.type_constraints_input == 'Load your own data'",
-                                tabsetPanel(
-                                  id = "tabset_select_profile",
-                                  food_constraints_select_tab,
+                                condition = "(input.type_constraints_input == 'Load your own data' && input.constraints_panel == 'Nutrient constraints')||(input.type_constraints_input == 'Pre-loaded profiles' && input.constraints_panel == 'Nutrient constraints')",
+                                column(width = 3,
+                                       tags$h3(span(HTML('Nutrients'), style = 'padding-left:15px')),
+                                       box(
+                                         width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                         checkboxGroupInput(
+                                           "nutrient_columns_input",
+                                           label = NULL,
+                                           choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)'),
+                                           selected = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
+                                         ),
+                                         br(),
+                                         br()
+                                       )
+                                       )
+                              )
+                              
+
+                              
+                              #conditionalPanel(
+                               # condition = "input.type_constraints_input == 'Load your own data'",
+                                #tabsetPanel(
+                                 # id = "tabset_select_profile",
+                                  #food_constraints_select_tab,
                                   #food_group_constraints_select_tab,
                                   #nutrient_constraints_select_tab,
-                                )
-                              ),
+                                #)
+                              #),
+                              #tabsetPanel(
+                               # food_constraints_pre_tab
+                              #)
                               #conditionalPanel(
                                 #condition = "input.type_constraints_input == 'Pre-loaded profiles'",
                                 #column(width = 9,
@@ -466,9 +623,6 @@ constraint_tabs <- tabPanel('Constraints',
                                 #)
                               #)
                               
-                            ),
-                            fluidRow(
-                              DTOutput('teste'),style = "overflow-y: scroll;overflow-x: scroll;"
                             )
 
                               
@@ -593,20 +747,33 @@ server <- function(input, output, session){
              'Takeaway (%)' = {etperc <- c('takeaway_perc_min', 'takeaway_perc_max')},
       )
     }
-    c(ec, ef, esf, es, efib, ep, esod, epperc, esfperc, efperc, echoperc, em, esperc, eaperc, edperc, etperc)
+    c(ec, ef, esf, echo, es, efib, ep, esod, epperc, esfperc, efperc, echoperc, em, esperc, eaperc, edperc, etperc)
   })
   
-  restriction_values <- reactive({
-    c('food_group', 'food_name', 'food_id', 'serve_size', 'min_g', 'max_g')
+  restriction_food_values <- reactive({
     df_r <- data.frame(food_group = df1()$food_group,
                        food_name = df1()$food_name,
                        food_id = df1()$food_id)
     df_r$max_g <- df_r$min_g <- df_r$serve_size <- double(nrow(df1()))
 
     for(i in 1:nrow(df_r)){
-      df_r$serve_size[i] <- coalesce(input[[paste0('numeric_', df_r$food_id[i])]],0)
-      df_r$min_g[i] <- coalesce(input[[paste0('slider_', df_r$food_id[i])]][1], 0)
-      df_r$max_g[i] <- coalesce(input[[paste0('slider_', df_r$food_id[i])]][2], 2000)
+      df_r$serve_size[i] <- coalesce(input[[paste0('numeric_food_', df_r$food_id[i])]],0)
+      df_r$min_g[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][1], 0)
+      df_r$max_g[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][2], 2000)
+    }
+    df_r
+  })
+  
+  restriction_food_group_values <- reactive({
+    food_groups <- sort(unique(df1()$food_group))
+    df_r <- data.frame(food_group = food_groups)
+    df_r$max_serve <- df_r$min_serve <- df_r$max_g <-df_r$min_g <-double(length(food_groups))
+    
+    for(food_group in food_groups){
+      df_r$min_g[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_g_',food_group)]][1], 0)
+      df_r$max_g[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_g_',food_group)]][2], 5000)
+      df_r$min_serve[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_s_',food_group)]][1], 0)
+      df_r$max_serve[df_r$food_group == food_group] <- coalesce(input[[paste0('slider_food_group_s_',food_group)]][2], 50)
     }
     df_r
   })
@@ -653,7 +820,7 @@ server <- function(input, output, session){
       columns <- c('food_group', 'food_name', 'food_id', 'serve_size', choices()$foods)
       data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
     } else{
-      restriction_values()
+      restriction_food_values()
     }
   })
   
@@ -661,6 +828,8 @@ server <- function(input, output, session){
     if(input$type_constraints_input == 'Pre-loaded profiles'){
       columns <- c('food_group', choices()$food_groups)
       data3() %>% filter(food_group %in% unique(df1()$food_group) & diet == choices()$plan) %>% select(all_of(columns))
+    } else{
+      restriction_food_group_values()
     }
   })
   
@@ -817,37 +986,31 @@ server <- function(input, output, session){
 
 
   
-  output$servesSelectOutput <- renderUI({
-    tabs <- lapply(sort(unique(df1()$food_group)), tabSelectFunction, df = df1())
+  output$foodConstraintsSelectOutput <- renderUI({
+    tabs <- lapply(sort(unique(df1()$food_group)), tabSelectFoodFunction, df = df1())
     do.call(tabsetPanel, tabs)
 
 
   })
   
-  output$teste <- DT::renderDataTable({
-     datatable(
-      df2(),
+  output$foodGroupConstraintsSelectOutput <- renderUI({
+    lapply(sort(unique(df1()$food_group)), tabSelectFoodGroupFunction) 
+  })
+  
+
+  output$foodConstraintsDisplayOutput <- DT::renderDataTable({
+    df_f <- data.frame(df2())
+    colnames(df_f) <- c('food_group', 'food_name', 'food_id', 'serve_size', 'min_g', 'max_g')
+    datatable(
+      df_f,
+      colnames = c('Food group', 'Food name', 'ID','Serve size (g)', 'Minimum intake (g)', 'Maximum intake (g)'),
       selection = 'none',
       rownames = FALSE,
-      width = '50%'
+      width = '80%'
     )
   })
   
-  
-  
-  #output$servesPreOutput <- DT::renderDataTable({
-  #  df_f <- data.frame(df2())
-  #  colnames(df_f) <- c('food_group', 'food_name', 'food_id', 'serve_size', 'min_g', 'max_g')
-  #  datatable(
-  #    df_f,
-  #    colnames = c('Food group', 'Food name', 'ID','Serve size (g)', 'Minimum intake (g)', 'Maximum intake (g)'),
-  #    selection = 'none',
-  #    rownames = FALSE,
-  #    width = '80%'
-  #  )
-  #})
-  
-  output$groupsPreOutput <- DT::renderDataTable({
+  output$foodGroupConstraintsDisplayOutput <- DT::renderDataTable({
     df_fg <- data.frame(df3())
     colnames(df_fg) <- c('food_group', 'min_g', 'max_g', 'min_serve', 'max_serve')
     datatable(
@@ -860,20 +1023,20 @@ server <- function(input, output, session){
   })
 
 
-  output$nutrientsPreOutput <- DT::renderDataTable({
-    df_n <- data.frame(df4())
-    if('discretionary_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
-      df_n$discretionary_perc_min <- min_groups()$discretionary
-      df_n$discretionary_perc_max <- max_groups()$discretionary
-    }
-    if('alcohol_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
-      df_n$alcohol_perc_min <- min_groups()$alcohol
-      df_n$alcohol_perc_max <- max_groups()$alcohol
-    }
-    if('takeaway_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
-      df_n$takeaway_perc_min <- min_groups()$takeaway
-      df_n$takeaway_perc_max <- max_groups()$takeaway
-    }
+  output$nutrientsConstraintsDisplayOutput <- DT::renderDataTable({
+    df_n <- transposeNutrientsTable(data.frame(df4()))
+    #if('discretionary_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
+    #  df_n$discretionary_perc_min <- min_groups()$discretionary
+    #  df_n$discretionary_perc_max <- max_groups()$discretionary
+    #}
+    #if('alcohol_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
+    #  df_n$alcohol_perc_min <- min_groups()$alcohol
+    #  df_n$alcohol_perc_max <- max_groups()$alcohol
+    #}
+    #if('takeaway_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Load your own data')){
+    #  df_n$takeaway_perc_min <- min_groups()$takeaway
+    #  df_n$takeaway_perc_max <- max_groups()$takeaway
+    #}
     
     #df4()$energy_mj_min <- df4()$energy_mj_min*1000
     #df4()$energy_mj_max <- df4()$energy_mj_max*1000
@@ -881,7 +1044,7 @@ server <- function(input, output, session){
     #names(df4())[names(df4()) == 'energy_mj_max'] <- 'energy_kj_max'
     datatable(
       df_n,
-      colnames = unlist(lapply(names(df_n), nutritentsTableName)),
+      #colnames = unlist(lapply(names(df_n), nutritentsTableName)),
       selection = 'none',
       rownames = FALSE,
       width = '80%'
