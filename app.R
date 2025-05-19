@@ -60,7 +60,10 @@ min_discretionary_perc <- 0
 max_discretionary_perc <- 100
 min_takeaway_perc <- 0
 max_takeaway_perc <- 100
-
+linked_low_1 <- c("69016", "69013", "79065")
+linked_high_1 <- c("80066", "80023")
+linked_low_2 <- "65021"
+linked_high_2 <- c("79006", "79088")
 #Functions----------------------------------------------------------------------
 nutritentsTableName <- function(col_name){
   switch(col_name,
@@ -698,8 +701,85 @@ constraint_tabs <- tabPanel('Constraints',
                                                           )
                                                           
                                                           
+                                                 ),
+                                                 tabPanel('Linked foods',
+                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                                          conditionalPanel(
+                                                            condition = "input.type_constraints_input == 'Pre-loaded profiles'",
+                                                          conditionalPanel(
+                                                            condition = 'output.linkedFoods1 == true || output.linkedFoods2 == true',
+                                                                fluidRow(p('Linked foods are edibles whose consumption is evaluated together. The total serves of the foods in the lower bracket must be equal or lower than the consumption of the foods in the higher bracket.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                                                         p('I.e. since', strong("bread"), " and ",strong("butter")," are linked, and ", strong("bread"), " is the ", strong ("higher"), " food, it must have a total amount of serves at least equal to ", strong("butter"),".",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
+                                                                
+                                                                conditionalPanel(
+                                                                  condition = 'output.linkedFoods1 == true && output.linkedFoods2 == false',
+                                                                  fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the first pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
+                                                                  fluidRow(
+                                                                    column(width = 4,
+                                                                           checkboxInput(inputId = 'linked_foods_1_input',
+                                                                                         label = 'Bread/cream',
+                                                                                         value = TRUE)),
+                                                                    conditionalPanel(
+                                                                      condition = 'input.linked_foods_1_input == true',
+                                                                      column(width = 8,
+                                                                             tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                             box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                               tabsetPanel(
+                                                                               tabPanel('Lower foods',
+                                                                                        DTOutput('linkedFoodsLow1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                               tabPanel('Higher foods',
+                                                                                        DTOutput('linkedFoodsHigh1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                             )))
+                                                                    )
+
+                                                                  )),
+                                                            conditionalPanel(
+                                                              condition = 'output.linkedFoods1 == false && output.linkedFoods2 == true',
+                                                              fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the second pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
+                                                              fluidRow(
+                                                                column(width = 4,
+                                                                       checkboxInput(inputId = 'linked_foods_2_input',
+                                                                                     label = 'Milk/cereal',
+                                                                                     value = TRUE),
+                                                                       ),
+                                                                conditionalPanel(
+                                                                  condition = 'input.linked_foods_2_input == true',
+                                                                  column(width = 8,
+                                                                         tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                         box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                             tabsetPanel(
+                                                                               tabPanel('Lower foods',
+                                                                                        DTOutput('linkedFoodsLow2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                               tabPanel('Higher foods',
+                                                                                        DTOutput('linkedFoodsHigh2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                             )))
+                                                                )
+                                                              )),
+                                                            conditionalPanel(
+                                                              condition = 'output.linkedFoods1 == true && output.linkedFoods2 == true',
+                                                              fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". Please check the checkboxes bellow if you want to add them as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
+                                                              fluidRow(
+                                                                column(width = 4,
+                                                                       checkboxInput(inputId = 'linked_foods_1_input',
+                                                                                     label = 'Bread/cream',
+                                                                                     value = TRUE),
+                                                                       checkboxInput(inputId = 'linked_foods_2_input',
+                                                                                     label = 'Milk/cereal',
+                                                                                     value = TRUE)),
+
+
+
+                                                                )
+                                                            
+
+                                                            )
+                                                            
+                                                          )
+
                                                  )
-                                                 
+
+                                                 )
+                                                 )      
                                                  
                                                  
                                      )
@@ -809,7 +889,14 @@ ui <- navbarPage(title = 'DIETCOST',
                    tags$style(type="text/css",
                               ".shiny-output-error { visibility: hidden; }",
                               ".shiny-output-error:before { visibility: hidden; }"
-                   )
+                   ),
+                   tags$script("var linked_foods_low_1 = ['69016', '69013', '79065'];
+                                var linked_foods_high_1 = ['80066','80023']
+                                
+                                const indexesOf = (arr, item) => 
+                                arr.reduce(
+                                  (acc, v, i) => (v === item && acc.push(i), acc),
+                                []);")
                  ),
                  header = tagList(useShinydashboard()),
                  intro_tab,
@@ -1202,7 +1289,7 @@ server <- function(input, output, session){
       width = '80%'
     )
   })
-
+  
 
   output$nutrientsConstraintsDisplayOutput <- DT::renderDataTable({
     df_n <- df4()
@@ -1233,6 +1320,57 @@ server <- function(input, output, session){
       width = '80%'
     )
   })
+  
+  output$linkedFoodsLow1Output <- DT::renderDataTable({
+    dfl1 <- df1() %>% filter(food_id %in% linked_low_1) %>% select(food_id, food_name, food_group)
+    datatable(
+      dfl1,
+      colnames = c('ID', 'Name', 'Group'),
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
+  })
+  
+  output$linkedFoodsHigh1Output <- DT::renderDataTable({
+    dfh1 <- df1() %>% filter(food_id %in% linked_high_1) %>% select(food_id, food_name, food_group)
+    datatable(
+      dfh1,
+      colnames = c('ID', 'Name', 'Group'),
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
+  })
+  
+  output$linkedFoodsLow2Output <- DT::renderDataTable({
+    dfl2 <- df1() %>% filter(food_id %in% linked_low_2) %>% select(food_id, food_name, food_group)
+    datatable(
+      dfl2,
+      colnames = c('ID', 'Name', 'Group'),
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
+  })
+  
+  output$linkedFoodsHigh2Output <- DT::renderDataTable({
+    dfh2 <- df1() %>% filter(food_id %in% linked_high_2) %>% select(food_id, food_name, food_group)
+    datatable(
+      dfh2,
+      colnames = c('ID', 'Name', 'Group'),
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
+  })
+  
+  output$linkedFoods1 <- reactive(any(linked_low_1 %in% df1()$food_id) && any(linked_high_1 %in% df1()$food_id))
+  output$linkedFoods2 <- reactive(any(linked_low_2 %in% df1()$food_id) && any(linked_high_2 %in% df1()$food_id))
+  
+  
+  outputOptions(output, "linkedFoods1", suspendWhenHidden = FALSE)
+  outputOptions(output, "linkedFoods2", suspendWhenHidden = FALSE)
 
 }
 
