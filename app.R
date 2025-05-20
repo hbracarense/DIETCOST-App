@@ -708,12 +708,12 @@ constraint_tabs <- tabPanel('Constraints',
                                                             condition = "input.type_constraints_input == 'Pre-loaded profiles'",
                                                           conditionalPanel(
                                                             condition = 'output.linkedFoods1 == true || output.linkedFoods2 == true',
-                                                                fluidRow(p('Linked foods are edibles whose consumption is evaluated together. The total serves of the foods in the lower bracket must be equal or lower than the consumption of the foods in the higher bracket.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-                                                                         p('I.e. since', strong("bread"), " and ",strong("butter")," are linked, and ", strong("bread"), " is the ", strong ("higher"), " food, it must have a total amount of serves at least equal to ", strong("butter"),".",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
+                                                                fluidRow(p('Linked foods are edibles whose consumption is evaluated together. The total serves of the foods in the lower bracket must be equal or lower than the consumption of the foods in the higher bracket.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;'),
+                                                                         p('I.e. since', strong("bread"), " and ",strong("butter")," are linked, and ", strong("bread"), " is the ", strong ("higher"), " food, it must have a total amount of serves at least equal to ", strong("butter"),".",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;')),
                                                                 
                                                                 conditionalPanel(
                                                                   condition = 'output.linkedFoods1 == true && output.linkedFoods2 == false',
-                                                                  fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the first pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
+                                                                  fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the first pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;')),
                                                                   fluidRow(
                                                                     column(width = 4,
                                                                            checkboxInput(inputId = 'linked_foods_1_input',
@@ -735,7 +735,7 @@ constraint_tabs <- tabPanel('Constraints',
                                                                   )),
                                                             conditionalPanel(
                                                               condition = 'output.linkedFoods1 == false && output.linkedFoods2 == true',
-                                                              fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the second pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
+                                                              fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the second pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;')),
                                                               fluidRow(
                                                                 column(width = 4,
                                                                        checkboxInput(inputId = 'linked_foods_2_input',
@@ -757,7 +757,7 @@ constraint_tabs <- tabPanel('Constraints',
                                                               )),
                                                             conditionalPanel(
                                                               condition = 'output.linkedFoods1 == true && output.linkedFoods2 == true',
-                                                              fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". Please check the checkboxes bellow if you want to add them as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
+                                                              fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". Please check the checkboxes bellow if you want to add them as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;')),
                                                               fluidRow(
                                                                 column(width = 4,
                                                                        checkboxInput(inputId = 'linked_foods_t1_input',
@@ -827,14 +827,18 @@ constraint_tabs <- tabPanel('Constraints',
 
                                                             )
                                                             
+                                                          ),
+                                                          conditionalPanel(
+                                                            condition = 'output.linkedFoods1 == false && output.linkedFoods2 == false',
+                                                            fluidRow(
+                                                              p("There are no foods whose consumption should be evaluated together at your database. If you wish to add this constraint, please select ", strong("Reset"), ' at the ', strong('Foods'), 'tab.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;')
+                                                            )
                                                           )
-
-                                                 )
 
                                                  )
                                                  )      
                                                  
-                                                 
+                                                 ) 
                                      )
                                      
                                      ),
