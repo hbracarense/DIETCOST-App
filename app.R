@@ -726,9 +726,9 @@ constraint_tabs <- tabPanel('Constraints',
                                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
                                                                                tabsetPanel(
                                                                                tabPanel('Lower foods',
-                                                                                        DTOutput('linkedFoodsLow1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                        DTOutput('linkedFoodsLowA1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
                                                                                tabPanel('Higher foods',
-                                                                                        DTOutput('linkedFoodsHigh1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                        DTOutput('linkedFoodsHighA1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
                                                                              )))
                                                                     )
 
@@ -749,9 +749,9 @@ constraint_tabs <- tabPanel('Constraints',
                                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
                                                                              tabsetPanel(
                                                                                tabPanel('Lower foods',
-                                                                                        DTOutput('linkedFoodsLow2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                        DTOutput('linkedFoodsLowA2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
                                                                                tabPanel('Higher foods',
-                                                                                        DTOutput('linkedFoodsHigh2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                        DTOutput('linkedFoodsHighA2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
                                                                              )))
                                                                 )
                                                               )),
@@ -760,15 +760,68 @@ constraint_tabs <- tabPanel('Constraints',
                                                               fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". Please check the checkboxes bellow if you want to add them as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;")),
                                                               fluidRow(
                                                                 column(width = 4,
-                                                                       checkboxInput(inputId = 'linked_foods_1_input',
+                                                                       checkboxInput(inputId = 'linked_foods_t1_input',
                                                                                      label = 'Bread/cream',
                                                                                      value = TRUE),
-                                                                       checkboxInput(inputId = 'linked_foods_2_input',
+                                                                       checkboxInput(inputId = 'linked_foods_t2_input',
                                                                                      label = 'Milk/cereal',
                                                                                      value = TRUE)),
+                                                                
 
-
-
+                                                                      column(width = 8,
+                                                                            conditionalPanel(
+                                                                              condition = 'input.linked_foods_t1_input == true && input.linked_foods_t2_input == true',
+                                                                              tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                              tabsetPanel(
+                                                                                tabPanel('Bread/cream',
+                                                                                         tabsetPanel(
+                                                                                           tabPanel('Lower foods',
+                                                                                                    DTOutput('linkedFoodsLowB1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                           tabPanel('Higher foods',
+                                                                                                    DTOutput('linkedFoodsHighB1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                           
+                                                                                         )
+                                                                                         ),
+                                                                                tabPanel('Milk/cereal',
+                                                                                         tabsetPanel(
+                                                                                           tabPanel('Lower foods',
+                                                                                                    DTOutput('linkedFoodsLowB2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                           tabPanel('Higher foods',
+                                                                                                    DTOutput('linkedFoodsHighB2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                           
+                                                                                         )
+                                                                                )
+                                                                              )
+                                                                            )
+                                                                            ),
+                                                                            conditionalPanel(
+                                                                              condition = 'input.linked_foods_t1_input == true && input.linked_foods_t2_input == false',
+                                                                              tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                                  tabsetPanel(
+                                                                                    tabPanel('Lower foods',
+                                                                                             DTOutput('linkedFoodsLowC1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                    tabPanel('Higher foods',
+                                                                                             DTOutput('linkedFoodsHighC1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                    
+                                                                                  )
+                                                                              )
+                                                                            ),
+                                                                            conditionalPanel(
+                                                                              condition = 'input.linked_foods_t1_input == false && input.linked_foods_t2_input == true',
+                                                                              tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                                  tabsetPanel(
+                                                                                    tabPanel('Lower foods',
+                                                                                             DTOutput('linkedFoodsLowC2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                    tabPanel('Higher foods',
+                                                                                             DTOutput('linkedFoodsHighC2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                    
+                                                                                  )
+                                                                              )
+                                                                            )
+                                                                      )
                                                                 )
                                                             
 
@@ -1321,7 +1374,7 @@ server <- function(input, output, session){
     )
   })
   
-  output$linkedFoodsLow1Output <- DT::renderDataTable({
+  output$linkedFoodsLowC1Output <- output$linkedFoodsLowB1Output <- output$linkedFoodsLowA1Output <- DT::renderDataTable({
     dfl1 <- df1() %>% filter(food_id %in% linked_low_1) %>% select(food_id, food_name, food_group)
     datatable(
       dfl1,
@@ -1332,7 +1385,7 @@ server <- function(input, output, session){
     )
   })
   
-  output$linkedFoodsHigh1Output <- DT::renderDataTable({
+  output$linkedFoodsHighC1Output <- output$linkedFoodsHighB1Output <- output$linkedFoodsHighA1Output <- DT::renderDataTable({
     dfh1 <- df1() %>% filter(food_id %in% linked_high_1) %>% select(food_id, food_name, food_group)
     datatable(
       dfh1,
@@ -1343,7 +1396,7 @@ server <- function(input, output, session){
     )
   })
   
-  output$linkedFoodsLow2Output <- DT::renderDataTable({
+  output$linkedFoodsLowC2Output <- output$linkedFoodsLowB2Output <- output$linkedFoodsLowA2Output <- DT::renderDataTable({
     dfl2 <- df1() %>% filter(food_id %in% linked_low_2) %>% select(food_id, food_name, food_group)
     datatable(
       dfl2,
@@ -1354,7 +1407,7 @@ server <- function(input, output, session){
     )
   })
   
-  output$linkedFoodsHigh2Output <- DT::renderDataTable({
+  output$linkedFoodsHighC2Output <-output$linkedFoodsHighB2Output <-output$linkedFoodsHighA2Output <- DT::renderDataTable({
     dfh2 <- df1() %>% filter(food_id %in% linked_high_2) %>% select(food_id, food_name, food_group)
     datatable(
       dfh2,
