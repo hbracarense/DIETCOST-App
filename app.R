@@ -64,6 +64,34 @@ linked_low_1 <- c("69016", "69013", "79065")
 linked_high_1 <- c("80066", "80023")
 linked_low_2 <- "65021"
 linked_high_2 <- c("79006", "79088")
+model_foods <- c('food_group', 'food_name', 'food_id', 'CF_gCO2eq', 'WF_l', 'EF_g_m2', 'energy_kj_g', 'fat_g', 'sat_fat_g', 'CHO_g', 'sugars_g', 'fibre_g', 'protein_g', 'sodium_mg', 'price')
+nutrient_colnames <- c('energy_kj_g', 'fat_g', 'sat_fat_g', 'CHO_g', 'sugars_g', 'fibre_g', 'protein_g', 'sodium_mg')
+model_foods_cons_names <- c('food_group','food_name','food_id','size','min','max')
+model_food_groups_cons_names <- c('food_group','min_g','max_g','min_serve','max_serve')
+model_nutrients_cons_names <- c('energy_mj_min', 'energy_mj_max', 'fat_grams_min', 'fat_grams_max', 'sat_fat_grams_min', 'sat_fat_grams_max', 'CHO_grams_min', 'CHO_grams_max', 'sugars_grams_min', 'sugars_grams_max', 'fibre_grams_min', 'fibre_grams_max', 'protein_grams_min', 'protein_grams_max', 'sodium_mgrams_min', 'sodium_mgrams_max', 'protein_perc_min', 'protein_perc_max', 'sat_fat_perc_min', 'sat_fat_perc_max', 'fat_perc_min', 'fat_perc_max', 'CHO_perc_min', 'CHO_perc_max', 'redmeat_grams_min', 'redmeat_grams_max', 'sugars_perc_min', 'sugars_perc_max', 'alcohol_perc_min', 'alcohol_perc_max', 'discretionary_perc_min', 'discretionary_perc_max', 'takeaway_perc_min', 'takeaway_perc_max')
+model_linked_names <- c('low', 'high')
+nutrient_pairs <- list(list('energy_mj_min','energy_mj_max'),
+                       list('fat_grams_min', 'fat_grams_max'),
+                       list('sat_fat_grams_min', 'sat_fat_grams_max'),
+                       list('CHO_grams_min', 'CHO_grams_max'),
+                       list('sugars_grams_min', 'sugars_grams_max'),
+                       list('fibre_grams_min', 'fibre_grams_max'),
+                       list('protein_grams_min', 'protein_grams_max'),
+                       list('sodium_mgrams_min', 'sodium_mgrams_max'),
+                       list('protein_perc_min', 'protein_perc_max'),
+                       list('sat_fat_perc_min', 'sat_fat_perc_max'),
+                       list('fat_perc_min', 'fat_perc_max'),
+                       list('CHO_perc_min', 'CHO_perc_max'),
+                       list('redmeat_grams_min', 'redmeat_grams_max'),
+                       list('sugars_perc_min', 'sugars_perc_max'),
+                       list('alcohol_perc_min', 'alcohol_perc_max'),
+                       list('discretionary_perc_min', 'discretionary_perc_max'),
+                       list('takeaway_perc_min', 'takeaway_perc_max'))
+
+np <- nutrient_pairs[1:8]
+nperc <- nutrient_pairs[c(11,10,12,14,9)]
+n_b <- nutrient_colnames[c(2:5,7)]
+
 #Functions----------------------------------------------------------------------
 nutritentsTableName <- function(col_name){
   switch(col_name,
@@ -325,9 +353,174 @@ verifyTabFile <- function(input_file, sheet_name, input_name){
              )
              
              shinyjs::reset(input_name)})
+  if(any(sapply(df,anyNA))){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p('Check your data. There are missing values.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')
+        
+      )
+    )
+    
+    shinyjs::reset(input_name)
+  }
+  
   return(df)
 }
 
+verifyColumnNames <- function(df,model_names, sheet, input_name){
+  if(any(!(names(df) %in% model_names))){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p("Sheet ", strong(sheet), " has non-standard column names. Please check the model and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+        
+      )
+    )
+    
+    shinyjs::reset(input_name)
+  }
+}
+
+whichNonnum <- function(x) {
+  badNum <- is.na(suppressWarnings(as.numeric(as.character(x))))
+  which(badNum & !is.na(x))
+}
+
+nonNumericCheck <- function(df, sheet, input_name){
+  if(length(unlist(lapply(df, whichNonnum)) > 0)){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p("Sheets ", strong(sheet)," has non-numeric data in numeric columns. Please check and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+        
+      )
+    )
+    
+    shinyjs::reset(input_name)
+  }
+}
+
+verifySpecialGroups <- function(col_name, group_name, df, df_foods, input_name){
+  if(col_name %in% names(df)){
+    if(df[col_name] > 0 && !(group_name %in% unique(df_foods))){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("The minimum energy intake from ", group_name, " is positive but there are no ", group_name, " in food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset(input_name)
+    }
+    
+    col_name_max <- paste0(strsplit(col_name, 'min')[[1]], 'max')
+    if(df[col_name] < 0 || df[col_name_max] > 100){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Check the lower and upper bounds for ", group_name, ". Their percentage value must be between 0 and 100, respectively.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset(input_name)
+    }
+  }
+}
+
+verifyLinkedSingleTab <- function(path_name, sheet_name, model, input_name, food_ids){
+  df <- read_excel(path_name, sheet = sheet_name)
+  
+  if(!identical(sort(names(df)), sort(model))){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p("Please check the column names in tab ", strong(sheet_name), ".", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+        
+      )
+    )
+    shinyjs::reset(input_name)
+    return(list(low = NULL,
+                high = NULL))
+  }
+  
+  lk_low <- df$low[!is.na(df$low)]
+  lk_high <- df$high[!is.na(df$high)]
+ 
+  if(length(lk_low) == 0 || length(lk_high) == 0){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p("Please fill the tab ", strong(sheet_name), " with non-null values.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+        
+      )
+    )
+    shinyjs::reset(input_name)
+    return(list(low = NULL,
+                high = NULL))
+  }
+  
+  if(length(whichNonnum(lk_low)) > 0 || length(whichNonnum(lk_high)) > 0){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p("Please use only numeric food IDs in tab ", strong(sheet_name), ".", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+        
+      )
+    )
+    shinyjs::reset(input_name)
+    return(list(low = NULL,
+                high = NULL))
+  }
+  
+  if(length(intersect(lk_low, lk_high))>0){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p("Please make sure that values in low and high columns in ", strong(sheet_name), " are unique.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+        
+      )
+    )
+    shinyjs::reset(input_name)
+    return(list(low = NULL,
+                high = NULL))
+  }
+  
+  if(any(!(c(lk_low, lk_high) %in% unique(food_ids)))){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p("Please make sure that all food IDs in low and high columns at tab ", strong(sheet_name), " are in your food data.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+        
+      )
+    )
+    shinyjs::reset(input_name)
+    return(list(low = NULL,
+                high = NULL))
+  }
+  return(list(low = lk_low,
+              high = lk_high))
+}
+
+verifyGeneralIntersect <- function(list_vectors, input_name){
+  results <- list()
+  for(i in 1:length(list_vectors)){
+    result <- mapply(intersect, x = list_vectors[i], y = list_vectors[c(-i)])
+    results <- append(results, result)
+  }
+  if(length(unique(unlist(results)))>0){
+    showModal(
+      modalDialog(
+        title = 'Warning!',
+        p("Please make sure that all food IDs between both tabs of linked foods are unique.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+        
+      )
+    )
+    shinyjs::reset(input_name)
+  }
+}
 
 
 #Modules------------------------------------------------------------------------
@@ -951,7 +1144,7 @@ conditionalPanel(
       width = 12, solidHeader = FALSE, status = 'warning',
       p('Your data must be in an Excel workbook (.xlsx format).', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
       p('This workbook ', strong('must'), ' follow the model attached below. It is ', strong('strongly advised'), ' to download the model before proceeding.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p('The Excel file must have four ', strong('mandatory'), ' tabs, named as: ', strong('food_constraints'), ', ', strong('food_group_constraints'), ' and ', strong('nutrient_targets'), '.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+      p('The Excel file must have three ', strong('mandatory'), ' tabs, named as: ', strong('food_constraints'), ', ', strong('food_group_constraints'), ' and ', strong('nutrient_targets'), '.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
       p('Also, it can contain two ',strong('optional'),' tabs: ', strong('linked_foods_pair_1'), ' and ', strong('linked_foods_pair_2'), ". If you don't want to use linked foods as a constraint, you can safely delete both tabs. Alternatively, if you wish to use only one pair of linked foods, delete only ", strong('linked_foods_pair_2'), " and keep ", strong('linked_foods_pair_1'), ". Please don't include a ", strong('linked_foods_pair_2'), " tab without a ", strong('linked_foods_pair_1'), ".", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
       p('The linked foods tab is comprised of two columns, named ',strong('low'),' and ', strong('high'), ", that should receive only the unique food IDs of the linked foods. It's not necessary for the columns to be of the same size, i.e. the low bracket can contain three foods and the high bracket only one. But please make sure that all the IDs referred in this tab are actually present at the food data previously uploaded and that they are not repeated - a food cannot be simultaneously in both brackets or in both pairs at the same time.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
       p('All the data should refer only to a single individual and diet, i.e. ', strong('man'),' with a ', strong('healthy'), " diet. It isn't necessary to explicitly name them in the dataset. As such, you shouldn't include columns such as ", strong('individual'),'/',strong('person'), ' or ', strong('diet'), style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
@@ -1619,13 +1812,197 @@ server <- function(input, output, session){
     shinyjs::enable('pair_2_lower_input')
     removeModal()
   })
-
+  
+  constraint_inputs <- reactiveValues(foods = NULL,
+                                      food_groups = NULL,
+                                      nutrients = NULL,
+                                      linked_1_low = NULL,
+                                      linked_1_high = NULL,
+                                      linked_2_low = NULL,
+                                      linked_2_high = NULL)
   
   observeEvent(
     input$constraints_data_input,
     {df_foods_input <- verifyTabFile(input$constraints_data_input$datapath, 'food_constraints', 'constraints_data_input')
     df_food_groups_input <- verifyTabFile(input$constraints_data_input$datapath, 'food_group_constraints', 'constraints_data_input')
     df_nutrients_input <- verifyTabFile(input$constraints_data_input$datapath, 'nutrient_targets', 'constraints_data_input')
+
+    verifyColumnNames(df_foods_input, model_foods_cons_names, 'food_constraints', 'constraints_data_input')
+    verifyColumnNames(df_food_groups_input, model_food_groups_cons_names, 'food_group_constraints', 'constraints_data_input')
+    verifyColumnNames(df_nutrients_input, model_nutrients_cons_names, 'nutrient_targets', 'constraints_data_input')
+
+    if(!identical(sort(unique(df1()$food_id)),sort(unique(df_foods_input$food_id)))){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Sheet ", strong('food_constraints')," has distinct food IDs from food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset('constraints_data_input')
+    }
+    
+    if(!identical(sort(unique(df1()$food_group)),sort(unique(df_foods_input$food_group)))){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Sheet ", strong('food_constraints')," has distinct food groups from food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset('constraints_data_input')
+    }
+    
+    if(!identical(sort(unique(df_food_groups_input$food_group)), sort(unique(df_foods_input$food_group)))){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Sheets ", strong('food_constraints')," and ", strong('food_group_constraints'), " have mismatched food groups. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset('constraints_data_input')
+    }
+    
+    nonNumericCheck(df_foods_input[,c('size', 'min', 'max')], 'food_constraints', 'constraints_data_input')
+    nonNumericCheck(df_food_groups_input[,c('min_g','max_g','min_serve','max_serve')], 'food_group_constraints', 'constraints_data_input')
+    nonNumericCheck(df_nutrients_input, 'nutrient_targets', 'constraints_data_input')
+    
+    for(i in 1:length(nutrient_pairs)){
+      if(((nutrient_pairs[[i]][[1]] %in% names(df_nutrients_input)) && !(nutrient_pairs[[i]][[2]] %in% names(df_nutrients_input)))||(!(nutrient_pairs[[i]][[1]] %in% names(df_nutrients_input)) && (nutrient_pairs[[i]][[2]] %in% names(df_nutrients_input)))){
+        showModal(
+          modalDialog(
+            title = 'Warning!',
+            p("There are mismatched nutrient constraints pairs. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+            
+          )
+        )
+        
+        shinyjs::reset('constraints_data_input')
+      }
+    }
+    
+    
+    for(i in 1:length(np)){
+      if((np[[i]][[1]] %in% names(df_nutrients_input)) && !(nutrient_colnames[i] %in% names(df1()))){
+        showModal(
+          modalDialog(
+            title = 'Warning!',
+            p("There are nutrient constraints that are absent in food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+            
+          )
+        )
+        
+        shinyjs::reset('constraints_data_input')
+      }
+    }
+    
+    for(i in 1:length(nutrient_pairs)){
+        if(nutrient_pairs[[i]][[1]] %in% names(df_nutrients_input) && !is.na(df_nutrients_input[nutrient_pairs[[i]][[1]]]) && !is.na(df_nutrients_input[nutrient_pairs[[i]][[2]]]) && df_nutrients_input[nutrient_pairs[[i]][[1]]] > df_nutrients_input[nutrient_pairs[[i]][[2]]]){
+          showModal(
+            modalDialog(
+              title = 'Warning!',
+              p("There are minimum nutrient constraints that exceed its maximum value. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+              
+            )
+          )
+          
+          shinyjs::reset('constraints_data_input')
+        }
+
+    }
+    
+    if(any(grepl('perc', names(df_nutrients_input))) && !('energy_kj_g' %in% names(df1()))){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Energy column is absent from food data and is mandatory to calculate percentage restrictions. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset('constraints_data_input')
+    }
+    
+    for(i in 1:length(nperc)){
+      if(nperc[[i]][[1]] %in% names(df_nutrients_input)){
+        if(!(n_b[i] %in% names(df1()))){
+          showModal(
+            modalDialog(
+              title = 'Warning!',
+              p("A percentage constraint is adopted but its base nutrient is absent from food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+              
+            )
+          )
+          
+          shinyjs::reset('constraints_data_input')
+        }
+        if(df_nutrients_input[nperc[[i]][[1]]]<0||df_nutrients_input[nperc[[i]][[2]]]>100){
+          showModal(
+            modalDialog(
+              title = 'Warning!',
+              p("Check the percentage constraints. There are minimum values lower than 0 or maximum higher than 100.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+              
+            )
+          )
+          
+          shinyjs::reset('constraints_data_input')
+        }
+      }
+      
+    }
+    
+
+    verifySpecialGroups('alcohol_perc_min', 'Alcohol', df_nutrients_input, df1()$food_group, 'constraints_data_input')
+    verifySpecialGroups('discretionary_perc_min', 'Discretionary foods', df_nutrients_input, df1()$food_group, 'constraints_data_input')
+    verifySpecialGroups('takeaway_perc_min', 'Takeaway', df_nutrients_input, df1()$food_group, 'constraints_data_input')
+    
+    constraint_inputs$foods <- df_foods_input
+    constraint_inputs$food_groups <- df_food_groups_input
+    constraint_inputs$nutrients <- df_nutrients_input
+    
+    sheets <- excel_sheets(input$constraints_data_input$datapath)
+    
+    if('linked_foods_pair_1' %in% sheets){
+      lk1 <- verifyLinkedSingleTab(input$constraints_data_input$datapath, 'linked_foods_pair_1', model_linked_names, 'constraints_data_input', df1()$food_id)
+      lk1_low <- lk1[['low']]
+      lk1_high <- lk1[['high']]
+      
+      constraint_inputs$linked_1_low <- lk1_low
+      constraint_inputs$linked_1_high <- lk1_high
+      
+      if('linked_foods_pair_2' %in% sheets){
+        lk2 <- verifyLinkedSingleTab(input$constraints_data_input$datapath, 'linked_foods_pair_2', model_linked_names, 'constraints_data_input', df1()$food_id)
+        lk2_low <- lk2[['low']]
+        lk2_high <- lk2[['high']]
+        
+        if(!is.null(lk1_low) && !is.null(lk1_high) && !is.null(lk2_low) && !is.null(lk2_high)){
+          verifyGeneralIntersect(list(lk1_low, lk1_high, lk2_low, lk2_high), 'constraints_data_input')
+          
+          constraint_inputs$linked_2_low <- lk2_low
+          constraint_inputs$linked_2_high <- lk2_high
+        }
+        
+        
+        
+      } 
+    } else if('linked_foods_pair_2' %in% sheets){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Please insert a ", strong('linked_foods_pair_1'), " tab or rename ", strong('linked_foods_pair_2'), ".", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset('constraints_data_input')
+    }
+    
+    
+
     
     }
   )
