@@ -60,10 +60,10 @@ min_discretionary_perc <- 0
 max_discretionary_perc <- 100
 min_takeaway_perc <- 0
 max_takeaway_perc <- 100
-linked_low_1 <- c("69016", "69013", "79065")
-linked_high_1 <- c("80066", "80023")
-linked_low_2 <- "65021"
-linked_high_2 <- c("79006", "79088")
+linked_low_1_def <- c("69016", "69013", "79065")
+linked_high_1_def <- c("80066", "80023")
+linked_low_2_def <- "65021"
+linked_high_2_def <- c("79006", "79088")
 model_foods <- c('food_group', 'food_name', 'food_id', 'CF_gCO2eq', 'WF_l', 'EF_g_m2', 'energy_kj_g', 'fat_g', 'sat_fat_g', 'CHO_g', 'sugars_g', 'fibre_g', 'protein_g', 'sodium_mg', 'price')
 nutrient_colnames <- c('energy_kj_g', 'fat_g', 'sat_fat_g', 'CHO_g', 'sugars_g', 'fibre_g', 'protein_g', 'sodium_mg')
 model_foods_cons_names <- c('food_group','food_name','food_id','size','min','max')
@@ -214,7 +214,7 @@ tabSelectFoodFunction <- function(food_group_name, df){
                  column(width = 4,
                         br(),
                         numericInput(inputId = paste0('numeric_food_',df_foods$food_id[i]), label = 'Serve size (g)',
-                                     min = min_serve_size, max = max_serve_size, value = min_serve_size)
+                                     min = min_serve_size, max = max_serve_size, value = 20)
                  )
                  
                )
@@ -368,7 +368,7 @@ verifyTabFile <- function(input_file, sheet_name, input_name){
   return(df)
 }
 
-verifyColumnNames <- function(df,model_names, sheet, input_name){
+verifyColumnNames <- function(df,model_names, sheet, input_name, mandatory = NULL){
   if(any(!(names(df) %in% model_names))){
     showModal(
       modalDialog(
@@ -377,9 +377,26 @@ verifyColumnNames <- function(df,model_names, sheet, input_name){
         
       )
     )
-    
+
     shinyjs::reset(input_name)
+    return(0)
   }
+  
+  if(!is.null(mandatory)){
+    if(any(!(mandatory %in% names(df)))){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Sheet ", strong(sheet), " doesn't have one of the mandatory columns. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      shinyjs::reset(input_name)
+      return(0)
+    } 
+  }
+  
+  return(1)
 }
 
 whichNonnum <- function(x) {
@@ -387,18 +404,57 @@ whichNonnum <- function(x) {
   which(badNum & !is.na(x))
 }
 
-nonNumericCheck <- function(df, sheet, input_name){
-  if(length(unlist(lapply(df, whichNonnum)) > 0)){
-    showModal(
-      modalDialog(
-        title = 'Warning!',
-        p("Sheets ", strong(sheet)," has non-numeric data in numeric columns. Please check and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-        
+nonNumericCheck <- function(df, columns, sheet, input_name){
+  for(column in columns){
+    if(any(grepl('[a-zA-Z]',as.character(df[[column]])))){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Sheets ", strong(sheet)," has non-numeric data in column: ", strong(column),". Please check and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
       )
-    )
-    
-    shinyjs::reset(input_name)
+      
+      shinyjs::reset(input_name)
+      return(0)
+    }
   }
+  return(1)
+}
+
+nutrientValueCheck <- function(df, sheet, nutrient_pairs, input_name){
+  columns <- names(df)
+  for(column in columns){
+    if(any(grepl('[a-zA-Z]',as.character(df[[column]])))){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("Sheets ", strong(sheet)," has non-numeric data in column: ", strong(column),". Please check and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset(input_name)
+      return(0)
+    }
+  }
+  
+  for(i in 1:length(nutrient_pairs)){
+    if(nutrient_pairs[[i]][[1]] %in% names(df) && !is.na(df[nutrient_pairs[[i]][[1]]]) && !is.na(df[nutrient_pairs[[i]][[2]]]) && df[nutrient_pairs[[i]][[1]]] > df[nutrient_pairs[[i]][[2]]]){
+      showModal(
+        modalDialog(
+          title = 'Warning!',
+          p("There are minimum nutrient constraints that exceed its maximum value. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+          
+        )
+      )
+      
+      shinyjs::reset(input_name)
+      return(0)
+    }
+    
+  }
+  return(1)
 }
 
 verifySpecialGroups <- function(col_name, group_name, df, df_foods, input_name){
@@ -413,6 +469,7 @@ verifySpecialGroups <- function(col_name, group_name, df, df_foods, input_name){
       )
       
       shinyjs::reset(input_name)
+      return(0)
     }
     
     col_name_max <- paste0(strsplit(col_name, 'min')[[1]], 'max')
@@ -426,8 +483,10 @@ verifySpecialGroups <- function(col_name, group_name, df, df_foods, input_name){
       )
       
       shinyjs::reset(input_name)
+      return(0)
     }
   }
+  return(1)
 }
 
 verifyLinkedSingleTab <- function(path_name, sheet_name, model, input_name, food_ids){
@@ -617,7 +676,8 @@ foods_tab <- tabPanel('Foods',
                                   p('Your data must be in an Excel spreadsheet (.xlsx format).', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                   p('Also, your column names must be',strong('exactly'),'as the ones in the model sheet.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                   p('Be aware of the variable types: emission and price columns',strong('must'),'be numeric.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-                                  p("Don't delete any column. If you don't want to use a given variable, set its value to zero. Food group, food name and food ID are",strong('mandatory'), '.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                  p("You may delete any nutrient column you don't want to evaluate, but please be aware that it must also be absent from the nutrient constraints file. Food group, food name and food ID are",strong('mandatory'), '.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                  p("However, your file must have at least",strong('one'), " nutrient column. If you don't wish to calculate the cost or the environmental impact of your diet, you're free to delete its columns from the file.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                   p('Please download the sheet model if you have any doubts. File size is up to 10MB. After submitting, please click the',strong('Proceed'),' button.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                   div(
                                     style = "display: inline-block; position:relative; left:calc(37.5%);",
@@ -648,12 +708,15 @@ foods_tab <- tabPanel('Foods',
                               column(width = 4,
                                      div(
                                        style = "display: inline-block; position:relative; left:calc(37.5%);",
-                                       actionButton(
+                                       shinyjs::disabled(                                       
+                                         actionButton(
                                          inputId = "proceed_upload_input",
                                          label = "Proceed",
                                          style = "color: #fff; background-color: #222222; border-color: #fff;"
-                                       )
+                                       ))
+
                                      )
+                                  
                                      ),
                               column(width = 4)
                             )
@@ -795,386 +858,513 @@ nutrient_constraints_pre_tab <- tabPanel('Nutrient constraints',
 #General tab
 constraint_tabs <- tabPanel('Constraints',
                             conditionalPanel(
-                              condition = "input.type_food_insert_input == 'Assemble food data from our database'",
-                               fluidRow(
-                                 column(width = 3,
-                                        tags$h3(span(HTML('Data insertion'), style = 'padding-left:15px')),
-                                        box(
-                                          width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                          radioButtons(
-                                            "type_constraints_input",
-                                            label = NULL,
-                                            c('Pre-loaded profiles', 'Assemble your own constraints')
-                                          ),
-                                          br(),
-                                          br()
-                                        )),
-                                 column(width = 3,
-                                        conditionalPanel(
-                                          condition = "input.type_constraints_input == 'Pre-loaded profiles'",
-                                          tags$h3(span(HTML('Individual'), style = 'padding-left:15px')),
-                                          box(
-                                            width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                            radioButtons(
-                                              "person_profiles_input",
-                                              label = NULL,
-                                              c('45-years old man', '37-years old woman', '12-years old boy', '8-years old girl')
-                                            ),
-                                            br(),
-                                            br()
-                                        )
-                                        )
-                                 ),
-                                 column(width = 3,
-                                        conditionalPanel(
-                                          condition = "input.type_constraints_input == 'Pre-loaded profiles'",
-                                          tags$h3(span(HTML('Diet'), style = 'padding-left:15px')),
-                                          box(
-                                            width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                            radioButtons(
-                                              "diet_profiles_input",
-                                              label = NULL,
-                                              c('Current', 'EAT-Lancet', 'Healthy')
-                                            ),
-                                            br(),
-                                            br()
-                                          )
-                                        )
-                                 ),
-                                 column(width = 3,
-                                        conditionalPanel(
-                                          condition = "input.type_constraints_input == 'Pre-loaded profiles' && input.diet_profiles_input != 'Healthy' && input.constraints_panel == 'Nutrient constraints' && (input.person_profiles_input == '45-years old man' || input.person_profiles_input == '37-years old woman') && input.nutrient_columns_input && (input.nutrient_columns_input.indexOf('Alcohol (%)') > -1 || input.nutrient_columns_input.indexOf('Discretionary (%)') > -1 || input.nutrient_columns_input.indexOf('Takeaway (%)') > -1)",
-                                          tags$h3(span(HTML('Special groups intake'), style = 'padding-left:15px')),
-                                          box(
-                                              width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                              conditionalPanel(
-                                                condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Alcohol (%)') > -1",
-                                                tags$div(class = "slider-custom",
-                                                sliderInput(inputId = 'slider_alcohol_perc_input', label = 'Alcohol energy percentage',
-                                                            min = min_alcohol_perc, max = max_alcohol_perc, value = c(min_alcohol_perc,max_alcohol_perc), step = 1))
-                                              ),
-                                              conditionalPanel(
-                                                condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Discretionary (%)') > -1",
-                                                tags$div(class = "slider-custom",
-                                                sliderInput(inputId = 'slider_discretionary_perc_input', label = 'Discretionary foods energy percentage',
-                                                            min = min_discretionary_perc, max = max_discretionary_perc, value = c(min_discretionary_perc,max_discretionary_perc), step = 1))
-                                              ),
-                                              conditionalPanel(
-                                                condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Takeaway (%)') > -1",
-                                                tags$div(class = "slider-custom",
-                                                sliderInput(inputId = 'slider_takeaway_perc_input', label = 'Takeaway energy percentage',
-                                                            min = min_takeaway_perc, max = max_takeaway_perc, value = c(min_takeaway_perc,max_takeaway_perc), step = 1))
-                                              )
-                                          )
-                                        )
-                                 )
-                               ),
-                            fluidRow(
-                              column(width = 9,
-                                     tabsetPanel(id = "constraints_panel",
-                                                 useShinyjs(),
-                                                 tabPanel("Food constraints",
-                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                                              conditionalPanel(
-                                                                condition = "input.type_constraints_input == 'Assemble your own constraints'",
-                                                                tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
-                                                                fluidRow(
-                                                                  column(width = 8, 
-                                                                         uiOutput('foodConstraintsSelectOutput'))
-                                                                ),
-                                                                tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
-                                                              ),       
-                                                              DTOutput('foodConstraintsDisplayOutput', width = '95%'),style = "overflow-y: scroll;overflow-x: scroll;"
-                                                              
-                                                          )
-                                                          
-                                                          
-                                                 ),
-                                                 tabPanel('Food group constraints',
-                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                                              conditionalPanel(
-                                                                condition = "input.type_constraints_input == 'Assemble your own constraints'",
-                                                                tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
-                                                                fluidRow(
-                                                                  column(width = 8, 
-                                                                         uiOutput('foodGroupConstraintsSelectOutput'))
-                                                                ),
-                                                                tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
-                                                              ),
-                                                              DTOutput('foodGroupConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
-                                                          )
-                                                 ),
-                                                 tabPanel("Nutrient constraints",
-                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                                              conditionalPanel(
-                                                                condition = "input.type_constraints_input == 'Assemble your own constraints'",
-                                                                tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
-                                                                fluidRow(
-                                                                  column(width = 8, 
-                                                                         uiOutput('nutrientsConstraintsSelectOutput'))
-                                                                ),
-                                                                tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
-                                                              ),
-                                                              DTOutput('nutrientsConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
-                                                          )
-                                                          
-                                                          
-                                                 ),
-                                                 tabPanel('Linked foods',
-                                                          box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                                          conditionalPanel(
-                                                            condition = "input.type_constraints_input == 'Pre-loaded profiles'",
-                                                          conditionalPanel(
-                                                            condition = 'output.linkedFoods1 == true || output.linkedFoods2 == true',
-                                                                fluidRow(p('Linked foods are edibles whose consumption is evaluated together. The total serves of the foods in the lower bracket must be equal or lower than the consumption of the foods in the higher bracket.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-                                                                         p('I.e. since', strong("bread"), " and ",strong("butter")," are linked, and ", strong("bread"), " is the ", strong ("higher"), " food, it must have a total amount of serves at least equal to ", strong("butter"),".",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
-                                                                
-                                                                conditionalPanel(
-                                                                  condition = 'output.linkedFoods1 == true && output.linkedFoods2 == false',
-                                                                  fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the first pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
-                                                                  fluidRow(
-                                                                    column(width = 4,
-                                                                           checkboxInput(inputId = 'linked_foods_1_input',
-                                                                                         label = 'Bread/cream',
-                                                                                         value = TRUE)),
-                                                                    conditionalPanel(
-                                                                      condition = 'input.linked_foods_1_input == true',
-                                                                      column(width = 8,
-                                                                             tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
-                                                                             box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
-                                                                               tabsetPanel(
-                                                                               tabPanel('Lower foods',
-                                                                                        DTOutput('linkedFoodsLowA1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
-                                                                               tabPanel('Higher foods',
-                                                                                        DTOutput('linkedFoodsHighA1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
-                                                                             )))
-                                                                    )
-
-                                                                  )),
-                                                            conditionalPanel(
-                                                              condition = 'output.linkedFoods1 == false && output.linkedFoods2 == true',
-                                                              fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the second pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
-                                                              fluidRow(
-                                                                column(width = 4,
-                                                                       checkboxInput(inputId = 'linked_foods_2_input',
-                                                                                     label = 'Milk/cereal',
-                                                                                     value = TRUE),
-                                                                       ),
-                                                                conditionalPanel(
-                                                                  condition = 'input.linked_foods_2_input == true',
-                                                                  column(width = 8,
-                                                                         tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
-                                                                         box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
-                                                                             tabsetPanel(
-                                                                               tabPanel('Lower foods',
-                                                                                        DTOutput('linkedFoodsLowA2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
-                                                                               tabPanel('Higher foods',
-                                                                                        DTOutput('linkedFoodsHighA2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
-                                                                             )))
-                                                                )
-                                                              )),
-                                                            conditionalPanel(
-                                                              condition = 'output.linkedFoods1 == true && output.linkedFoods2 == true',
-                                                              fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". Please check the checkboxes bellow if you want to add them as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
-                                                              fluidRow(
-                                                                column(width = 4,
-                                                                       checkboxInput(inputId = 'linked_foods_t1_input',
-                                                                                     label = 'Bread/cream',
-                                                                                     value = TRUE),
-                                                                       checkboxInput(inputId = 'linked_foods_t2_input',
-                                                                                     label = 'Milk/cereal',
-                                                                                     value = TRUE)),
-                                                                
-
-                                                                      column(width = 8,
-                                                                            conditionalPanel(
-                                                                              condition = 'input.linked_foods_t1_input == true && input.linked_foods_t2_input == true',
-                                                                              tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
-                                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
-                                                                              tabsetPanel(
-                                                                                tabPanel('Bread/cream',
-                                                                                         tabsetPanel(
-                                                                                           tabPanel('Lower foods',
-                                                                                                    DTOutput('linkedFoodsLowB1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
-                                                                                           tabPanel('Higher foods',
-                                                                                                    DTOutput('linkedFoodsHighB1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
-                                                                                           
-                                                                                         )
-                                                                                         ),
-                                                                                tabPanel('Milk/cereal',
-                                                                                         tabsetPanel(
-                                                                                           tabPanel('Lower foods',
-                                                                                                    DTOutput('linkedFoodsLowB2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
-                                                                                           tabPanel('Higher foods',
-                                                                                                    DTOutput('linkedFoodsHighB2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
-                                                                                           
-                                                                                         )
-                                                                                )
-                                                                              )
-                                                                            )
-                                                                            ),
-                                                                            conditionalPanel(
-                                                                              condition = 'input.linked_foods_t1_input == true && input.linked_foods_t2_input == false',
-                                                                              tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
-                                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
-                                                                                  tabsetPanel(
-                                                                                    tabPanel('Lower foods',
-                                                                                             DTOutput('linkedFoodsLowC1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
-                                                                                    tabPanel('Higher foods',
-                                                                                             DTOutput('linkedFoodsHighC1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
-                                                                                    
-                                                                                  )
-                                                                              )
-                                                                            ),
-                                                                            conditionalPanel(
-                                                                              condition = 'input.linked_foods_t1_input == false && input.linked_foods_t2_input == true',
-                                                                              tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
-                                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
-                                                                                  tabsetPanel(
-                                                                                    tabPanel('Lower foods',
-                                                                                             DTOutput('linkedFoodsLowC2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
-                                                                                    tabPanel('Higher foods',
-                                                                                             DTOutput('linkedFoodsHighC2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
-                                                                                    
-                                                                                  )
-                                                                              )
-                                                                            )
-                                                                      )
-                                                                )
-                                                            
-
-                                                            )
-                                                            
-                                                          ),
-                                                          conditionalPanel(
-                                                            condition = 'output.linkedFoods1 == false && output.linkedFoods2 == false',
-                                                            fluidRow(
-                                                              p("There are no foods whose consumption should be evaluated together at your database. If you wish to add this constraint, please select ", strong("Reset"), ' at the ', strong('Foods'), 'tab.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')
-                                                            )
-                                                          )
-
-                                                 ),
-                                                 conditionalPanel(
-                                                   condition = "input.type_constraints_input == 'Assemble your own constraints'",
-                                                   fluidRow(p('Linked foods are edibles whose consumption is evaluated together. The total serves of the foods in the lower bracket must be equal or lower than the consumption of the foods in the higher bracket.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-                                                            p('I.e. since', strong("bread"), " and ",strong("butter")," are linked, and ", strong("bread"), " is the ", strong ("higher"), " food, it must have a total amount of serves at least equal to ", strong("butter"),".",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-                                                            p('You can form up to two pairs of linked foods, from the database assembled at the ', strong('Foods'),' tab. Each low/high bracket can have a maximum of 8 distinct foods. Please check the checkbox below if you wish to add this constraint.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
-                                                   fluidRow(column(width = 4,
-                                                          checkboxInput(inputId = 'linked_foods_l1_input',
-                                                                 label = 'Pair 1',
-                                                                 value = TRUE)),
-                                                   conditionalPanel(
-                                                     condition = 'input.linked_foods_l1_input == true',
-                                                     column(width = 8,
-                                                                     selectizeInput(
-                                                                       inputId = 'pair_1_lower_input',
-                                                                       label = 'Low Foods',
-                                                                       choices = foods_df$food_name,
-                                                                       multiple = TRUE,
-                                                                       options = list(maxItems = 8)
-                                                                     ),
-                                                                    conditionalPanel(
-                                                                      condition = 'input.pair_1_lower_input.length > 0',
-                                                                      selectizeInput(
-                                                                        inputId = 'pair_1_higher_input',
-                                                                        label = 'High Foods',
-                                                                        choices = foods_df$food_name,
-                                                                        multiple = TRUE,
-                                                                        options = list(maxItems = 8))
-                                                                    ))
-                                                   )),
-                                                   fluidRow(
-                                                     conditionalPanel(
-                                                       condition = 'input.linked_foods_l1_input == true && (input.pair_1_lower_input.length + input.pair_1_higher_input.length <= output.sizeFoods - 2) && input.pair_1_higher_input.length > 0',
-                                                       column(width = 4,
-                                                              checkboxInput(inputId = 'linked_foods_l2_input',
-                                                                            label = 'Pair 2',
-                                                                            value = TRUE)),
-                                                       conditionalPanel(
-                                                         condition = 'input.linked_foods_l2_input == true',
-                                                         column(width = 8,
-                                                                selectizeInput(
-                                                                  inputId = 'pair_2_lower_input',
-                                                                  label = 'Low Foods',
-                                                                  choices = foods_df$food_name,
-                                                                  multiple = TRUE,
-                                                                  options = list(maxItems = 8)
-                                                                ))
-                                                       )
-                                                     )
-                                                   )
-                                                   
-
-                                                 )
-                                                 )      
-                                                 
-                                                 ) 
-                                     )
-                                     
+                              condition = 'input.saving_button == 0 && input.proceed_button == 0 && input.proceed_upload_button == 0',
+                              column(width = 4),
+                              column(width = 4,
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     tags$h3(span(HTML('Warning!'), style = 'padding-left:15px')),
+                                     box(
+                                       width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                       p("Please set up your food database at the ", strong('Foods'), " tab before accessing this one.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
                                      ),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br(),
+                                     br()
+                                     ),
+                              column(width = 4),
+                            ),
+                            conditionalPanel(
+                              condition = '(input.saving_button > 0 || input.proceed_button > 0 || input.proceed_upload_button > 0) && input.proceed_upload_cons_button == 0 && input.proceed_cons_button == 0 && input.saving_cons_button == 0',
                               conditionalPanel(
-                                condition = "(input.type_constraints_input == 'Assemble your own constraints' && input.constraints_panel == 'Nutrient constraints')||(input.type_constraints_input == 'Pre-loaded profiles' && input.constraints_panel == 'Nutrient constraints')",
-                                column(width = 3,
-                                       tags$h3(span(HTML('Nutrients'), style = 'padding-left:15px')),
-                                       box(
-                                         width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                         checkboxGroupInput(
-                                           "nutrient_columns_input",
-                                           label = NULL,
-                                           choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)'),
-                                           selected = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
+                                condition = "input.type_food_insert_input == 'Assemble food data from our database'",
+                                fluidRow(
+                                  column(width = 3,
+                                         tags$h3(span(HTML('Data insertion'), style = 'padding-left:15px')),
+                                         box(
+                                           width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                           radioButtons(
+                                             "type_constraints_input",
+                                             label = NULL,
+                                             c('Pre-loaded profiles', 'Assemble your own constraints')
+                                           ),
+                                           br(),
+                                           br()
+                                         )),
+                                  column(width = 3,
+                                         conditionalPanel(
+                                           condition = "input.type_constraints_input == 'Pre-loaded profiles'",
+                                           tags$h3(span(HTML('Individual'), style = 'padding-left:15px')),
+                                           box(
+                                             width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                             radioButtons(
+                                               "person_profiles_input",
+                                               label = NULL,
+                                               c('45-years old man', '37-years old woman', '12-years old boy', '8-years old girl')
+                                             ),
+                                             br(),
+                                             br()
+                                           )
+                                         )
+                                  ),
+                                  column(width = 3,
+                                         conditionalPanel(
+                                           condition = "input.type_constraints_input == 'Pre-loaded profiles'",
+                                           tags$h3(span(HTML('Diet'), style = 'padding-left:15px')),
+                                           box(
+                                             width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                             radioButtons(
+                                               "diet_profiles_input",
+                                               label = NULL,
+                                               c('Current', 'EAT-Lancet', 'Healthy')
+                                             ),
+                                             br(),
+                                             br()
+                                           )
+                                         )
+                                  ),
+                                  column(width = 3,
+                                         conditionalPanel(
+                                           condition = "input.type_constraints_input == 'Pre-loaded profiles' && input.diet_profiles_input != 'Healthy' && input.constraints_panel == 'Nutrient constraints' && (input.person_profiles_input == '45-years old man' || input.person_profiles_input == '37-years old woman') && input.nutrient_columns_input && (input.nutrient_columns_input.indexOf('Alcohol (%)') > -1 || input.nutrient_columns_input.indexOf('Discretionary (%)') > -1 || input.nutrient_columns_input.indexOf('Takeaway (%)') > -1)",
+                                           tags$h3(span(HTML('Special groups intake'), style = 'padding-left:15px')),
+                                           box(
+                                             width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                             conditionalPanel(
+                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Alcohol (%)') > -1",
+                                               tags$div(class = "slider-custom",
+                                                        sliderInput(inputId = 'slider_alcohol_perc_input', label = 'Alcohol energy percentage',
+                                                                    min = min_alcohol_perc, max = max_alcohol_perc, value = c(min_alcohol_perc,max_alcohol_perc), step = 1))
+                                             ),
+                                             conditionalPanel(
+                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Discretionary (%)') > -1",
+                                               tags$div(class = "slider-custom",
+                                                        sliderInput(inputId = 'slider_discretionary_perc_input', label = 'Discretionary foods energy percentage',
+                                                                    min = min_discretionary_perc, max = max_discretionary_perc, value = c(min_discretionary_perc,max_discretionary_perc), step = 1))
+                                             ),
+                                             conditionalPanel(
+                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Takeaway (%)') > -1",
+                                               tags$div(class = "slider-custom",
+                                                        sliderInput(inputId = 'slider_takeaway_perc_input', label = 'Takeaway energy percentage',
+                                                                    min = min_takeaway_perc, max = max_takeaway_perc, value = c(min_takeaway_perc,max_takeaway_perc), step = 1))
+                                             )
+                                           )
+                                         )
+                                  )
+                                ),
+                                fluidRow(
+                                  column(width = 9,
+                                         tabsetPanel(id = "constraints_panel",
+                                                     useShinyjs(),
+                                                     tabPanel("Food constraints",
+                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                                                  conditionalPanel(
+                                                                    condition = "input.type_constraints_input == 'Assemble your own constraints'",
+                                                                    tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
+                                                                    fluidRow(
+                                                                      column(width = 8, 
+                                                                             uiOutput('foodConstraintsSelectOutput'))
+                                                                    ),
+                                                                    tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                  ),       
+                                                                  DTOutput('foodConstraintsDisplayOutput', width = '95%'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                                  
+                                                              )
+                                                              
+                                                              
+                                                     ),
+                                                     tabPanel('Food group constraints',
+                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                                                  conditionalPanel(
+                                                                    condition = "input.type_constraints_input == 'Assemble your own constraints'",
+                                                                    tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
+                                                                    fluidRow(
+                                                                      column(width = 8, 
+                                                                             uiOutput('foodGroupConstraintsSelectOutput'))
+                                                                    ),
+                                                                    tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                  ),
+                                                                  DTOutput('foodGroupConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                              )
+                                                     ),
+                                                     tabPanel("Nutrient constraints",
+                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                                                  conditionalPanel(
+                                                                    condition = "input.type_constraints_input == 'Assemble your own constraints'",
+                                                                    tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
+                                                                    fluidRow(
+                                                                      column(width = 8, 
+                                                                             uiOutput('nutrientsConstraintsSelectOutput'))
+                                                                    ),
+                                                                    tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                  ),
+                                                                  DTOutput('nutrientsConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                              )
+                                                              
+                                                              
+                                                     ),
+                                                     tabPanel('Linked foods',
+                                                              box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                                                  conditionalPanel(
+                                                                    condition = "input.type_constraints_input == 'Pre-loaded profiles'",
+                                                                    conditionalPanel(
+                                                                      condition = 'output.linkedFoods1 == true || output.linkedFoods2 == true',
+                                                                      fluidRow(p('Linked foods are edibles whose consumption is evaluated together. The total serves of the foods in the lower bracket must be equal or lower than the consumption of the foods in the higher bracket.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                                                                               p('I.e. since', strong("bread"), " and ",strong("butter")," are linked, and ", strong("bread"), " is the ", strong ("higher"), " food, it must have a total amount of serves at least equal to ", strong("butter"),".",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
+                                                                      
+                                                                      conditionalPanel(
+                                                                        condition = 'output.linkedFoods1 == true && output.linkedFoods2 == false',
+                                                                        fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the first pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
+                                                                        fluidRow(
+                                                                          column(width = 4,
+                                                                                 checkboxInput(inputId = 'linked_foods_1_input',
+                                                                                               label = 'Bread/cream',
+                                                                                               value = TRUE)),
+                                                                          conditionalPanel(
+                                                                            condition = 'input.linked_foods_1_input == true',
+                                                                            column(width = 8,
+                                                                                   tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                                   box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                                       tabsetPanel(
+                                                                                         tabPanel('Lower foods',
+                                                                                                  DTOutput('linkedFoodsLowA1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                         tabPanel('Higher foods',
+                                                                                                  DTOutput('linkedFoodsHighA1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                       )))
+                                                                          )
+                                                                          
+                                                                        )),
+                                                                      conditionalPanel(
+                                                                        condition = 'output.linkedFoods1 == false && output.linkedFoods2 == true',
+                                                                        fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". In your food database, only items for the second pair were selected. Please check the checkbox bellow if you want to add it as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
+                                                                        fluidRow(
+                                                                          column(width = 4,
+                                                                                 checkboxInput(inputId = 'linked_foods_2_input',
+                                                                                               label = 'Milk/cereal',
+                                                                                               value = TRUE),
+                                                                          ),
+                                                                          conditionalPanel(
+                                                                            condition = 'input.linked_foods_2_input == true',
+                                                                            column(width = 8,
+                                                                                   tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                                   box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                                       tabsetPanel(
+                                                                                         tabPanel('Lower foods',
+                                                                                                  DTOutput('linkedFoodsLowA2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                         tabPanel('Higher foods',
+                                                                                                  DTOutput('linkedFoodsHighA2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                       )))
+                                                                          )
+                                                                        )),
+                                                                      conditionalPanel(
+                                                                        condition = 'output.linkedFoods1 == true && output.linkedFoods2 == true',
+                                                                        fluidRow(p('The standard dataset of DIETCOST has two pairs of linked foods: ', strong("bread/cream"), " and ",strong("milk/cereal"),". Please check the checkboxes bellow if you want to add them as a constraint.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
+                                                                        fluidRow(
+                                                                          column(width = 4,
+                                                                                 checkboxInput(inputId = 'linked_foods_t1_input',
+                                                                                               label = 'Bread/cream',
+                                                                                               value = TRUE),
+                                                                                 checkboxInput(inputId = 'linked_foods_t2_input',
+                                                                                               label = 'Milk/cereal',
+                                                                                               value = TRUE)),
+                                                                          
+                                                                          
+                                                                          column(width = 8,
+                                                                                 conditionalPanel(
+                                                                                   condition = 'input.linked_foods_t1_input == true && input.linked_foods_t2_input == true',
+                                                                                   tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                                   box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                                       tabsetPanel(
+                                                                                         tabPanel('Bread/cream',
+                                                                                                  tabsetPanel(
+                                                                                                    tabPanel('Lower foods',
+                                                                                                             DTOutput('linkedFoodsLowB1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                                    tabPanel('Higher foods',
+                                                                                                             DTOutput('linkedFoodsHighB1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                                    
+                                                                                                  )
+                                                                                         ),
+                                                                                         tabPanel('Milk/cereal',
+                                                                                                  tabsetPanel(
+                                                                                                    tabPanel('Lower foods',
+                                                                                                             DTOutput('linkedFoodsLowB2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                                    tabPanel('Higher foods',
+                                                                                                             DTOutput('linkedFoodsHighB2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                                    
+                                                                                                  )
+                                                                                         )
+                                                                                       )
+                                                                                   )
+                                                                                 ),
+                                                                                 conditionalPanel(
+                                                                                   condition = 'input.linked_foods_t1_input == true && input.linked_foods_t2_input == false',
+                                                                                   tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                                   box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                                       tabsetPanel(
+                                                                                         tabPanel('Lower foods',
+                                                                                                  DTOutput('linkedFoodsLowC1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                         tabPanel('Higher foods',
+                                                                                                  DTOutput('linkedFoodsHighC1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                         
+                                                                                       )
+                                                                                   )
+                                                                                 ),
+                                                                                 conditionalPanel(
+                                                                                   condition = 'input.linked_foods_t1_input == false && input.linked_foods_t2_input == true',
+                                                                                   tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
+                                                                                   box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
+                                                                                       tabsetPanel(
+                                                                                         tabPanel('Lower foods',
+                                                                                                  DTOutput('linkedFoodsLowC2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                         tabPanel('Higher foods',
+                                                                                                  DTOutput('linkedFoodsHighC2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                         
+                                                                                       )
+                                                                                   )
+                                                                                 )
+                                                                          )
+                                                                        )
+                                                                        
+                                                                        
+                                                                      )
+                                                                      
+                                                                    ),
+                                                                    conditionalPanel(
+                                                                      condition = 'output.linkedFoods1 == false && output.linkedFoods2 == false',
+                                                                      fluidRow(
+                                                                        p("There are no foods whose consumption should be evaluated together at your database. If you wish to add this constraint, please select ", strong("Reset"), ' at the ', strong('Foods'), 'tab.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')
+                                                                      )
+                                                                    )
+                                                                    
+                                                                  ),
+                                                                  conditionalPanel(
+                                                                    condition = "input.type_constraints_input == 'Assemble your own constraints'",
+                                                                    fluidRow(p('Linked foods are edibles whose consumption is evaluated together. The total serves of the foods in the lower bracket must be equal or lower than the consumption of the foods in the higher bracket.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                                                                             p('I.e. since', strong("bread"), " and ",strong("butter")," are linked, and ", strong("bread"), " is the ", strong ("higher"), " food, it must have a total amount of serves at least equal to ", strong("butter"),".",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                                                                             p('You can form up to two pairs of linked foods, from the database assembled at the ', strong('Foods'),' tab. Each low/high bracket can have a maximum of 8 distinct foods. Please check the checkbox below if you wish to add this constraint.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;')),
+                                                                    fluidRow(column(width = 4,
+                                                                                    checkboxInput(inputId = 'linked_foods_l1_input',
+                                                                                                  label = 'Pair 1',
+                                                                                                  value = TRUE)),
+                                                                             conditionalPanel(
+                                                                               condition = 'input.linked_foods_l1_input == true',
+                                                                               column(width = 8,
+                                                                                      selectizeInput(
+                                                                                        inputId = 'pair_1_lower_input',
+                                                                                        label = 'Low Foods',
+                                                                                        choices = foods_df$food_name,
+                                                                                        multiple = TRUE,
+                                                                                        options = list(maxItems = 8)
+                                                                                      ),
+                                                                                      conditionalPanel(
+                                                                                        condition = 'input.pair_1_lower_input.length > 0',
+                                                                                        selectizeInput(
+                                                                                          inputId = 'pair_1_higher_input',
+                                                                                          label = 'High Foods',
+                                                                                          choices = foods_df$food_name,
+                                                                                          multiple = TRUE,
+                                                                                          options = list(maxItems = 8))
+                                                                                      ))
+                                                                             )),
+                                                                    fluidRow(
+                                                                      conditionalPanel(
+                                                                        condition = 'input.linked_foods_l1_input == true && (input.pair_1_lower_input.length + input.pair_1_higher_input.length <= output.sizeFoods - 2) && input.pair_1_higher_input.length > 0',
+                                                                        column(width = 4,
+                                                                               checkboxInput(inputId = 'linked_foods_l2_input',
+                                                                                             label = 'Pair 2',
+                                                                                             value = TRUE)),
+                                                                        conditionalPanel(
+                                                                          condition = 'input.linked_foods_l2_input == true',
+                                                                          column(width = 8,
+                                                                                 selectizeInput(
+                                                                                   inputId = 'pair_2_lower_input',
+                                                                                   label = 'Low Foods',
+                                                                                   choices = foods_df$food_name,
+                                                                                   multiple = TRUE,
+                                                                                   options = list(maxItems = 8)
+                                                                                 ),
+                                                                                 conditionalPanel(
+                                                                                   condition = 'input.pair_2_lower_input.length > 0',
+                                                                                   selectizeInput(
+                                                                                     inputId = 'pair_2_higher_input',
+                                                                                     label = 'High Foods',
+                                                                                     choices = foods_df$food_name,
+                                                                                     multiple = TRUE,
+                                                                                     options = list(maxItems = 8))
+                                                                                 ))
+                                                                        )
+                                                                      )
+                                                                    )
+                                                                    
+                                                                    
+                                                                  )
+                                                              )      
+                                                              
+                                                     ) 
+                                         )
+                                         
+                                  ),
+                                  conditionalPanel(
+                                    condition = "(input.type_constraints_input == 'Assemble your own constraints' && input.constraints_panel == 'Nutrient constraints')||(input.type_constraints_input == 'Pre-loaded profiles' && input.constraints_panel == 'Nutrient constraints')",
+                                    column(width = 3,
+                                           tags$h3(span(HTML('Nutrients'), style = 'padding-left:15px')),
+                                           box(
+                                             width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                             checkboxGroupInput(
+                                               "nutrient_columns_input",
+                                               label = NULL,
+                                               choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)'),
+                                               selected = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
+                                             ),
+                                             br(),
+                                             br()
+                                           )
+                                    )
+                                  )
+                                  
+                                  
+                                ),
+                                conditionalPanel(
+                                  condition = "input.type_food_insert_input == 'Assemble food data from our database'",
+                                  fluidRow(
+                                    div(
+                                      style = "display: inline-block; position:relative; left:calc(39%);",
+                                      downloadButton(
+                                        "saving_cons_input",
+                                        label = "Save and proceed",
+                                        style = "color: #fff; background-color: #222222; border-color: #fff;"
+                                      )
+                                    ),
+                                    div(
+                                      style = "display: inline-block; position:relative; left:calc(40.5%);",
+                                      actionButton(
+                                        inputId = "proceed_cons_input",
+                                        label = "Proceed without saving",
+                                        style = "color: #fff; background-color: #222222; border-color: #fff;"
+                                      )
+                                    ),
+                                  )
+                                )
+                                
+                              ),
+                              conditionalPanel(
+                                condition = "input.type_food_insert_input == 'Load your own data'",
+                                fluidRow(column(width = 2),
+                                         column(
+                                           width = 9,
+                                           tags$h3(span(HTML('Warning!'), style = 'padding-left:15px')),
+                                           box(
+                                             width = 12, solidHeader = FALSE, status = 'warning',
+                                             p('Your data must be in an Excel workbook (.xlsx format).', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p('This workbook ', strong('must'), ' follow the model attached below. It is ', strong('strongly advised'), ' to download the model before proceeding.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p('The Excel file must have three ', strong('mandatory'), ' tabs, named as: ', strong('food_constraints'), ', ', strong('food_group_constraints'), ' and ', strong('nutrient_targets'), '.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p('Also, it can contain two ',strong('optional'),' tabs: ', strong('linked_foods_pair_1'), ' and ', strong('linked_foods_pair_2'), ". If you don't want to use linked foods as a constraint, you can safely delete both tabs. Alternatively, if you wish to use only one pair of linked foods, delete only ", strong('linked_foods_pair_2'), " and keep ", strong('linked_foods_pair_1'), ". Please don't include a ", strong('linked_foods_pair_2'), " tab without a ", strong('linked_foods_pair_1'), ".", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p('The linked foods tab is comprised of two columns, named ',strong('low'),' and ', strong('high'), ", that should receive only the unique food IDs of the linked foods. It's not necessary for the columns to be of the same size, i.e. the low bracket can contain three foods and the high bracket only one. But please make sure that all the IDs referred in this tab are actually present at the food data previously uploaded and that they are not repeated - a food cannot be simultaneously in both brackets or in both pairs at the same time.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p('All the data should refer only to a single individual and diet, i.e. ', strong('man'),' with a ', strong('healthy'), " diet. It isn't necessary to explicitly name them in the dataset. As such, you shouldn't include columns such as ", strong('individual'),'/',strong('person'), ' or ', strong('diet'), style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p("Don't change column names. All the columns are mandatory for proper data loading, except the constraints in the ", strong('nutrient_targets')," tab. For an instance, If you don't want to use fat (g) intake as a constraint, you can safely delete both ", strong('fat_grams_min'), ' and ', strong('fat_grams_max'), '.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p(strong("Attention!"), "All constraints work in pairs. If you don't want to use one, you have to delete both the ", strong('minimum'), " and ", strong('maximum'), " columns.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p("Finally, please make sure that all the foods submitted in the previous section have constraints data in the .", strong("food_constraints"), " tab. The same is valid for all the food groups present in the food data in the ", strong("food_group_constraints"), " tab.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             p("Once again, it's advised to download the reference file. In case of any doubts, please refer to it. File size is up to 10MB. After submitting, please click the ", strong('Proceed'),' button below.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                             div(
+                                               style = "display: inline-block; position:relative; left:calc(37.5%);",
+                                               downloadButton(
+                                                 "constraints_data_model",
+                                                 label = "Download constraints model",
+                                                 style = "color: #fff; background-color: #222222; border-color: #fff;"
+                                               )
+                                             )
+                                           )
                                          ),
-                                         br(),
-                                         br()
-                                       )
-                                       )
+                                         column(width = 2)),
+                                fluidRow(
+                                  column(width = 4),
+                                  column(width = 4,
+                                         tags$h3(span(HTML('Data input'), style = 'padding-left:15px')),
+                                         box(
+                                           width = 12, solidHeader = FALSE, status = 'warning',
+                                           fileInput('constraints_data_input', NULL, accept = '.xlsx')
+                                         )),
+                                  column(width = 4)
+                                ),
+                                fluidRow(
+                                  column(width = 4),
+                                  column(width = 4,
+                                         div(
+                                           style = "display: inline-block; position:relative; left:calc(37.5%);",
+                                           shinyjs::disabled(                                       
+                                             actionButton(
+                                               inputId = "proceed_upload_cons_input",
+                                               label = "Proceed",
+                                               style = "color: #fff; background-color: #222222; border-color: #fff;"
+                                             ))
+                                           
+                                         )
+                                         
+                                  ),
+                                  column(width = 4)
+                                )
+                                )
+                              ),
+                            conditionalPanel(
+                              condition = 'input.proceed_upload_cons_button > 0 || input.proceed_cons_button > 0 || input.saving_cons_button > 0',
+                              fluidRow(
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br()
+                              ),
+                              fluidRow(
+                                column(
+                                  width = 3
+                                ),
+                                column(
+                                  width = 6,
+                                  tags$h3(span(HTML('Constraints data loaded!'), style = 'padding-left:15px')),
+                                  box(
+                                    width = 12, solidHeader = FALSE, status = 'warning',
+                                    p('Constraints data loaded with success!', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                    p('If you wish to reset the data, please click on the button below.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                    div(
+                                      style = "display: inline-block; position:relative; left:calc(37.5%);",
+                                      actionButton(
+                                        inputId = "reset_cons_input",
+                                        label = "Reset data",
+                                        style = "color: #fff; background-color: #222222; border-color: #fff;"
+                                      )
+                                    )
+                                  )
+                                ),
+                                column(
+                                  width = 3
+                                )
+                              ),
+                              fluidRow(
+                                br(),
+                                br(),
+                                br()
                               )
-                              
-
                             )
+                            )
+                            
 
-),
-conditionalPanel(
-  condition = "input.type_food_insert_input == 'Load your own data'",
-  fluidRow(column(width = 2),
-  column(
-    width = 9,
-    tags$h3(span(HTML('Warning!'), style = 'padding-left:15px')),
-    box(
-      width = 12, solidHeader = FALSE, status = 'warning',
-      p('Your data must be in an Excel workbook (.xlsx format).', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p('This workbook ', strong('must'), ' follow the model attached below. It is ', strong('strongly advised'), ' to download the model before proceeding.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p('The Excel file must have three ', strong('mandatory'), ' tabs, named as: ', strong('food_constraints'), ', ', strong('food_group_constraints'), ' and ', strong('nutrient_targets'), '.', style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p('Also, it can contain two ',strong('optional'),' tabs: ', strong('linked_foods_pair_1'), ' and ', strong('linked_foods_pair_2'), ". If you don't want to use linked foods as a constraint, you can safely delete both tabs. Alternatively, if you wish to use only one pair of linked foods, delete only ", strong('linked_foods_pair_2'), " and keep ", strong('linked_foods_pair_1'), ". Please don't include a ", strong('linked_foods_pair_2'), " tab without a ", strong('linked_foods_pair_1'), ".", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p('The linked foods tab is comprised of two columns, named ',strong('low'),' and ', strong('high'), ", that should receive only the unique food IDs of the linked foods. It's not necessary for the columns to be of the same size, i.e. the low bracket can contain three foods and the high bracket only one. But please make sure that all the IDs referred in this tab are actually present at the food data previously uploaded and that they are not repeated - a food cannot be simultaneously in both brackets or in both pairs at the same time.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p('All the data should refer only to a single individual and diet, i.e. ', strong('man'),' with a ', strong('healthy'), " diet. It isn't necessary to explicitly name them in the dataset. As such, you shouldn't include columns such as ", strong('individual'),'/',strong('person'), ' or ', strong('diet'), style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p("Don't change column names. All the columns are mandatory for proper data loading, except the constraints in the ", strong('nutrient_targets')," tab. For an instance, If you don't want to use fat (g) intake as a constraint, you can safely delete both ", strong('fat_grams_min'), ' and ', strong('fat_grams_max'), '.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p(strong("Attention!"), "All constraints work in pairs. If you don't want to use one, you have to delete both the ", strong('minimum'), " and ", strong('maximum'), " columns.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p("Finally, please make sure that all the foods submitted in the previous section have constraints data in the .", strong("food_constraints"), " tab. The same is valid for all the food groups present in the food data in the ", strong("food_group_constraints"), " tab.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      p("Once again, it's advised to download the reference file. In case of any doubts, please refer to it. File size is up to 10MB. After submitting, please click the ", strong('Proceed'),' button.',style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-      div(
-        style = "display: inline-block; position:relative; left:calc(37.5%);",
-        downloadButton(
-          "constraints_data_model",
-          label = "Download constraints model",
-          style = "color: #fff; background-color: #222222; border-color: #fff;"
-        )
-      )
-    )
-  ),
-  column(width = 2)),
-  fluidRow(
-    column(width = 4),
-    column(width = 4,
-           tags$h3(span(HTML('Data input'), style = 'padding-left:15px')),
-           box(
-             width = 12, solidHeader = FALSE, status = 'warning',
-             fileInput('constraints_data_input', NULL, accept = '.xlsx')
-           )),
-    column(width = 4)
-  )
-)
-)
+
 
 #General
 ui <- navbarPage(title = 'DIETCOST',
@@ -1401,23 +1591,7 @@ server <- function(input, output, session){
     if(input$type_food_insert_input == 'Assemble food data from our database'){
       data() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables())) 
     } else{
-      file <- input$food_data_input
-      req(file)
-      if(file_ext(file$name) == 'xlsx'){
-        temp_df <- read_excel(file$datapath)
-        model_df <- read_excel('www/food_data_model.xlsx')
-        if(identical(names(temp_df), names(model_df))){
-          if(!isTRUE(any(sapply(temp_df[,c('CF_gCO2eq', 'WF_l', 'EF_g_m2', 'price')], is.character)))){
-          if(!isTRUE(any(sapply(temp_df[,c('food_group','food_name', 'food_id')], is.na)))){
-            read_excel(file$datapath)
-          }
-            
-          }
-          
-        }
-      }
-      
-
+      food_upload_inputs$foods
       }
  
 
@@ -1435,30 +1609,136 @@ server <- function(input, output, session){
   })
   
   df2 <- reactive({
-    if(input$type_constraints_input == 'Pre-loaded profiles'){
-      columns <- c('food_group', 'food_name', 'food_id', 'serve_size', choices()$foods)
-      data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
-    } else{
-      restriction_food_values()
+    if(input$type_food_insert_input == 'Assemble food data from our database'){
+      if(input$type_constraints_input == 'Pre-loaded profiles'){
+        columns <- c('food_group', 'food_name', 'food_id', 'serve_size', choices()$foods)
+        data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
+      } else{
+        restriction_food_values()
+      }
+    }else{
+      constraint_inputs$foods
     }
+    
+
   })
   
   df3 <- reactive({
-    if(input$type_constraints_input == 'Pre-loaded profiles'){
-      columns <- c('food_group', choices()$food_groups)
-      data3() %>% filter(food_group %in% unique(df1()$food_group) & diet == choices()$plan) %>% select(all_of(columns))
-    } else{
-      restriction_food_group_values()
+    if(input$type_food_insert_input == 'Assemble food data from our database'){
+      if(input$type_constraints_input == 'Pre-loaded profiles'){
+        columns <- c('food_group', choices()$food_groups)
+        data3() %>% filter(food_group %in% unique(df1()$food_group) & diet == choices()$plan) %>% select(all_of(columns))
+      } else{
+        restriction_food_group_values()
+      }
+    }else{
+      constraint_inputs$food_groups
     }
+    
+
   })
   
   df4 <- reactive({
-    if(input$type_constraints_input == 'Pre-loaded profiles'){
-      #columns <- c('energy_mj_min','energy_mj_max','fat_grams_min','fat_grams_max','sat_fat_grams_min','sat_fat_grams_max','CHO_grams_min','CHO_grams_max','sugars_grams_min','sugars_grams_max','fibre_grams_min','fibre_grams_max','protein_grams_min','protein_grams_max','sodium_mgrams_min','sodium_mgrams_max','protein_perc_min','protein_perc_max','sat_fat_perc_min','sat_fat_perc_max','fat_perc_min','fat_perc_max','CHO_perc_min','CHO_perc_max','redmeat_grams_min','redmeat_grams_max','sugars_perc_min','sugars_perc_max','alcohol_perc_min','alcohol_perc_max','discretionary_perc_min','discretionary_perc_max','takeaway_perc_min','takeaway_perc_max')
-      data4() %>% filter(diet == choices()$plan & individual == choices()$nutrient_targets) %>% select(all_of(nutrient_cols())) %>% transposeNutrientsTable()
-    } else{
-      restriction_nutrient_values()
+    if(input$type_food_insert_input == 'Assemble food data from our database'){
+      if(input$type_constraints_input == 'Pre-loaded profiles'){
+        #columns <- c('energy_mj_min','energy_mj_max','fat_grams_min','fat_grams_max','sat_fat_grams_min','sat_fat_grams_max','CHO_grams_min','CHO_grams_max','sugars_grams_min','sugars_grams_max','fibre_grams_min','fibre_grams_max','protein_grams_min','protein_grams_max','sodium_mgrams_min','sodium_mgrams_max','protein_perc_min','protein_perc_max','sat_fat_perc_min','sat_fat_perc_max','fat_perc_min','fat_perc_max','CHO_perc_min','CHO_perc_max','redmeat_grams_min','redmeat_grams_max','sugars_perc_min','sugars_perc_max','alcohol_perc_min','alcohol_perc_max','discretionary_perc_min','discretionary_perc_max','takeaway_perc_min','takeaway_perc_max')
+        data4() %>% filter(diet == choices()$plan & individual == choices()$nutrient_targets) %>% select(all_of(nutrient_cols())) %>% transposeNutrientsTable()
+      } else{
+        restriction_nutrient_values()
+      }
+    }else{
+      constraint_inputs$nutrients
     }
+    
+
+  })
+  
+  linked_1_low <- reactive({
+    if(input$type_food_insert_input == 'Assemble food data from our database'){
+      if(input$type_constraints_input == 'Pre-loaded profiles'){
+      if(any(linked_low_1_def %in% df1()$food_id) && any(linked_high_1_def %in% df1()$food_id)){
+        if(isTRUE(input$linked_foods_1_input)||isTRUE(input$linked_foods_t1_input)){
+          df1() %>% filter(food_id %in% linked_low_1_def) %>% pull(food_id)
+        } else NULL
+      } else NULL
+    }else{
+      if(isTRUE(input$linked_foods_l1_input)){
+        if(length(input$pair_1_lower_input) > 0 && length(input$pair_1_higher_input) > 0){
+          df1() %>% filter(food_name %in% input$pair_1_lower_input) %>% pull(food_id)
+        } else NULL
+      } else NULL
+    }} else{
+      constraint_inputs$linked_1_low
+    }
+    
+
+    
+  })
+  
+  linked_1_high <- reactive({
+    if(input$type_food_insert_input == 'Assemble food data from our database'){
+      if(input$type_constraints_input == 'Pre-loaded profiles'){
+        if(any(linked_low_1_def %in% df1()$food_id) && any(linked_high_1_def %in% df1()$food_id)){
+          if(isTRUE(input$linked_foods_1_input)||isTRUE(input$linked_foods_t1_input)){
+            df1() %>% filter(food_id %in% linked_high_1_def) %>% pull(food_id)
+          } else NULL
+        } else NULL
+      }else{
+        if(isTRUE(input$linked_foods_l1_input)){
+          if(length(input$pair_1_lower_input) > 0 && length(input$pair_1_higher_input) > 0){
+            df1() %>% filter(food_name %in% input$pair_1_higher_input) %>% pull(food_id)
+          } else NULL
+        } else NULL
+      }} else{
+        constraint_inputs$linked_1_high
+      }
+    
+    
+    
+  })
+  
+  linked_2_low <- reactive({
+    if(input$type_food_insert_input == 'Assemble food data from our database'){
+      if(input$type_constraints_input == 'Pre-loaded profiles'){
+        if(any(linked_low_2_def %in% df1()$food_id) && any(linked_high_2_def %in% df1()$food_id)){
+          if(isTRUE(input$linked_foods_2_input)||isTRUE(input$linked_foods_t2_input)){
+            df2() %>% filter(food_id %in% linked_low_2_def) %>% pull(food_id)
+          } else NULL
+        } else NULL
+      }else{
+        if(isTRUE(input$linked_foods_l2_input)){
+          if(length(input$pair_2_lower_input) > 0 && length(input$pair_2_higher_input) > 0){
+            df2() %>% filter(food_name %in% input$pair_2_lower_input) %>% pull(food_id)
+          } else NULL
+        } else NULL
+      }} else{
+        constraint_inputs$linked_2_low
+      }
+    
+    
+    
+  })
+  
+  linked_2_high <- reactive({
+    if(input$type_food_insert_input == 'Assemble food data from our database'){
+      if(input$type_constraints_input == 'Pre-loaded profiles'){
+        if(any(linked_low_2_def %in% df1()$food_id) && any(linked_high_2_def %in% df1()$food_id)){
+          if(isTRUE(input$linked_foods_2_input)||isTRUE(input$linked_foods_t2_input)){
+            df2() %>% filter(food_id %in% linked_high_2_def) %>% pull(food_id)
+          } else NULL
+        } else NULL
+      }else{
+        if(isTRUE(input$linked_foods_l2_input)){
+          if(length(input$pair_2_lower_input) > 0 && length(input$pair_2_higher_input) > 0){
+            df2() %>% filter(food_name %in% input$pair_2_higher_input) %>% pull(food_id)
+          } else NULL
+        } else NULL
+      }} else{
+        constraint_inputs$linked_2_high
+      }
+    
+    
+    
   })
   
   observe({
@@ -1472,42 +1752,132 @@ server <- function(input, output, session){
     }
   })
   
-  observe({
-    useShinyjs()
-    if(is.null(input$food_data_input)){
-      disable('proceed_upload_input')
-    } else{
-      if(file_ext(input$food_data_input$name) == 'xlsx'){
-        temp_df <- read_excel(input$food_data_input$datapath)
-        model_df <- read_excel('www/food_data_model.xlsx')
-        if(identical(names(temp_df),names(model_df))){
-          if(!isTRUE(any(sapply(temp_df[,c('CF_gCO2eq', 'WF_l', 'EF_g_m2', 'price')], is.character)))){
-            if(!isTRUE(any(sapply(temp_df[,c('food_group','food_name', 'food_id')], is.na)))){
-              enable('proceed_upload_input')
-            } else{
-              showModal(modalDialog("Check your file! There are missing values either in food group, name or ID columns."))
-              disable('proceed_upload_input')
-            }
-          } else{
-            showModal(modalDialog("Check your file! Columns that should be numeric are strings."))
-            disable('proceed_upload_input')
-          }
-        } else{
-          showModal(modalDialog("Invalid column names! Check your file."))
-          disable('proceed_upload_input')
-        }
-      } else{
-        showModal(modalDialog("Invalid format! Please submit a .xlsx file."))
-        disable('proceed_upload_input')
-      }
-    }
-  })
+  food_upload_inputs <- reactiveValues(foods = NULL)
   
+  observeEvent(input$food_data_input,
+               {
+                 x1f <- 1
+                 x2f <- x3f <- x4f <- x5f <- x6f <- x7f <-  0
+                 df_food_data <- tryCatch(expr = {read_excel(input$food_data_input$datapath)},
+                                          error = function(e){
+                                            showModal(
+                                              modalDialog(
+                                                title = 'Warning!',
+                                                p("It wasn't possible to read the file. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                                                
+                                              )
+                                            )
+                                            shinyjs::reset('food_data_input')
+                                            x1f <- 0
+                                            })
   
+                  if(any(!(names(df_food_data) %in% model_foods))){
+                   showModal(
+                     modalDialog(
+                       title = 'Warning!',
+                       p("The column names in your file don't match the standard ones. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                       
+                     )
+                   )
+                   
+                   shinyjs::reset('food_data_input')
+                   } else x2f <- 1
+                 
+
+                 if(any(!(c('food_group','food_name','food_id') %in% names(df_food_data)))){
+                   showModal(
+                     modalDialog(
+                       title = 'Warning!',
+                       p("Your data doesn't have one of the mandatory columns: food ID, food name or food group. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                       
+                     )
+                   )
+                   
+                   shinyjs::reset('food_data_input')
+                 } else x3f <- 1
+
+                 
+                 if("food_id" %in% names(df_food_data)){
+                   if(any(is.na(df_food_data$food_id))||(length(unique(df_food_data$food_id))!=nrow(df_food_data))||length(whichNonnum(df_food_data$food_id))>0){
+                     showModal(
+                       modalDialog(
+                         title = 'Warning!',
+                         p("Please check if every food has an unique numeric ID.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                         
+                       )
+                     )
+                     
+                     shinyjs::reset('food_data_input')
+                   } else x4f <- 1
+                 } 
+                 
+                 if(all(c('food_group', 'food_name') %in% names(df_food_data))){
+                   if(any(is.na(df_food_data$food_group))||any(is.na(df_food_data$food_name))){
+                     showModal(
+                       modalDialog(
+                         title = 'Warning!',
+                         p("Please check if every food has a name and a group.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                         
+                       )
+                     )
+                     
+                     shinyjs::reset('food_data_input')
+                   }  else x5f <- 1
+                 }
+                 
+                 if(length(intersect(nutrient_colnames, names(df_food_data))) == 0){
+                   showModal(
+                     modalDialog(
+                       title = 'Warning!',
+                       p("Your data must have at least one nutrient column. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                       
+                     )
+                   )
+                   
+                   shinyjs::reset('food_data_input')
+                 }  else x6f <- 1
+                  
+                 for(i in 4:length(model_foods)){
+                   if(model_foods[i] %in% names(df_food_data)){
+                     if((any(grepl('[a-zA-Z]',as.character(df_food_data[[model_foods[i]]]))))||(any(is.na(df_food_data[model_foods[i]])))){
+                       showModal(
+                         modalDialog(
+                           title = 'Warning!',
+                           p("Column ", strong(model_foods[i]), " must have only non-NA numeric data. Please check and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                           
+                         )
+                       )
+                       
+                       shinyjs::reset('food_data_input')
+                       break
+                     } else{
+                       if(i == length(model_foods)) x7f <- 1
+                     }
+                   }
+                 }
+                 
+                 
+                 if(x1f + x2f + x3f + x4f + x5f + x6f  + x7f == 7){
+                     food_upload_inputs$foods <- df_food_data
+                     shinyjs::enable('proceed_upload_input')
+                     shinyjs::disable('food_data_input')
+                   }
+                    
+               })
+  
+
   output$saving_input <- downloadHandler(
     filename = 'food_data.xlsx',
     content = function(file){
-      write_xlsx(df1(), file)
+      write_xlsx(list('Foods' = df1()), file)
+    }
+  )
+  
+  output$saving_cons_input <- downloadHandler(
+    filename = 'constraints_data.xlsx',
+    content = function(file){
+      file_content <- list(df2(), df3(), df4(), data.frame(linked_1_low()), data.frame(linked_1_high()), data.frame(linked_2_low()), data.frame(linked_2_high()))
+      write_xlsx(setNames(file_content, c('Foods', 'Food groups', 'Nutrients', 'Linked 1 - low', 'Linked 1 - high', 'Linked 2 - low', 'Linked 2 - high')), file)
     }
   )
   
@@ -1533,6 +1903,7 @@ server <- function(input, output, session){
     }
   })
   
+  
   observe({
     if(input$proceed_upload_input == 0){
       runjs("
@@ -1540,6 +1911,39 @@ server <- function(input, output, session){
             Shiny.onInputChange('proceed_upload_button', click)
             var proceed_upload_input = document.getElementById('proceed_upload_input')
             proceed_upload_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_upload_button', click)};
+            ")      
+    }
+  })
+  
+  observe({
+    if(is.null(input$saving_cons_input)){
+      runjs("
+            var click = 0;
+            Shiny.onInputChange('saving_cons_button', click)
+            var saving_cons_input = document.getElementById('saving_cons_input')
+            saving_cons_input.onclick = function() {click += 1; Shiny.onInputChange('saving_cons_button', click)};
+            ")      
+    }
+  })
+  
+  observe({
+    if(input$proceed_cons_input == 0){
+      runjs("
+            var click = 0;
+            Shiny.onInputChange('proceed_cons_button', click)
+            var proceed_cons_input = document.getElementById('proceed_cons_input')
+            proceed_cons_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_cons_button', click)};
+            ")      
+    }
+  })
+  
+  observe({
+    if(input$proceed_upload_cons_input == 0){
+      runjs("
+            var click = 0;
+            Shiny.onInputChange('proceed_upload_cons_button', click)
+            var proceed_upload_cons_input = document.getElementById('proceed_upload_cons_input')
+            proceed_upload_cons_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_upload_cons_button', click)};
             ")      
     }
   })
@@ -1563,7 +1967,10 @@ server <- function(input, output, session){
             Shiny.onInputChange('proceed_upload_button', click)
             var proceed_upload_input = document.getElementById('proceed_upload_input')
             proceed_upload_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_upload_button', click)};
+            
             ")
+      shinyjs::enable('food_data_input')
+      shinyjs::disable('proceed_upload_input')
       food_ids <- reactiveValues(ids = list(  food_ids <- reactiveValues(ids =   list(alcohol = NULL, 
                                                                                       beverages = NULL,
                                                                                       dairy = NULL,
@@ -1579,6 +1986,41 @@ server <- function(input, output, session){
 
     }
 
+  )
+  
+  observeEvent(
+    input$reset_cons_input,
+    {
+      runjs("
+            var click = 0;
+            Shiny.onInputChange('saving_cons_button', click)
+            var saving_cons_input = document.getElementById('saving_cons_input')
+            saving_cons_input.onclick = function() {click += 1; Shiny.onInputChange('saving_cons_button', click)};
+            
+            var click = 0;
+            Shiny.onInputChange('proceed_cons_button', click)
+            var proceed_cons_input = document.getElementById('proceed_cons_input')
+            proceed_cons_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_cons_button', click)};
+            
+            var click = 0;
+            Shiny.onInputChange('proceed_upload_cons_button', click)
+            var proceed_upload_cons_input = document.getElementById('proceed_upload_cons_input')
+            proceed_upload_cons_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_upload_cons_button', click)};
+            
+            ")
+      shinyjs::enable('constraints_data_input')
+      shinyjs::disable('proceed_upload_cons_input')
+      #df2() <- df3() <- df4() <- linked_1_low() <- linked_1_high() <- linked_2_low() <- linked_2_high() <- NULL
+      constraint_inputs <- reactiveValues(foods = NULL,
+                                          food_groups = NULL,
+                                          nutrients = NULL,
+                                          linked_1_low = NULL,
+                                          linked_1_high = NULL,
+                                          linked_2_low = NULL,
+                                          linked_2_high = NULL)
+      
+    }
+    
   )
 
   observeEvent(
@@ -1687,7 +2129,7 @@ server <- function(input, output, session){
   })
   
   output$linkedFoodsLowC1Output <- output$linkedFoodsLowB1Output <- output$linkedFoodsLowA1Output <- DT::renderDataTable({
-    dfl1 <- df1() %>% filter(food_id %in% linked_low_1) %>% select(food_id, food_name, food_group)
+    dfl1 <- df1() %>% filter(food_id %in% linked_low_1_def) %>% select(food_id, food_name, food_group)
     datatable(
       dfl1,
       colnames = c('ID', 'Name', 'Group'),
@@ -1698,7 +2140,7 @@ server <- function(input, output, session){
   })
   
   output$linkedFoodsHighC1Output <- output$linkedFoodsHighB1Output <- output$linkedFoodsHighA1Output <- DT::renderDataTable({
-    dfh1 <- df1() %>% filter(food_id %in% linked_high_1) %>% select(food_id, food_name, food_group)
+    dfh1 <- df1() %>% filter(food_id %in% linked_high_1_def) %>% select(food_id, food_name, food_group)
     datatable(
       dfh1,
       colnames = c('ID', 'Name', 'Group'),
@@ -1709,7 +2151,7 @@ server <- function(input, output, session){
   })
   
   output$linkedFoodsLowC2Output <- output$linkedFoodsLowB2Output <- output$linkedFoodsLowA2Output <- DT::renderDataTable({
-    dfl2 <- df1() %>% filter(food_id %in% linked_low_2) %>% select(food_id, food_name, food_group)
+    dfl2 <- df1() %>% filter(food_id %in% linked_low_2_def) %>% select(food_id, food_name, food_group)
     datatable(
       dfl2,
       colnames = c('ID', 'Name', 'Group'),
@@ -1720,7 +2162,7 @@ server <- function(input, output, session){
   })
   
   output$linkedFoodsHighC2Output <-output$linkedFoodsHighB2Output <-output$linkedFoodsHighA2Output <- DT::renderDataTable({
-    dfh2 <- df1() %>% filter(food_id %in% linked_high_2) %>% select(food_id, food_name, food_group)
+    dfh2 <- df1() %>% filter(food_id %in% linked_high_2_def) %>% select(food_id, food_name, food_group)
     datatable(
       dfh2,
       colnames = c('ID', 'Name', 'Group'),
@@ -1730,8 +2172,8 @@ server <- function(input, output, session){
     )
   })
   
-  output$linkedFoods1 <- reactive(any(linked_low_1 %in% df1()$food_id) && any(linked_high_1 %in% df1()$food_id))
-  output$linkedFoods2 <- reactive(any(linked_low_2 %in% df1()$food_id) && any(linked_high_2 %in% df1()$food_id))
+  output$linkedFoods1 <- reactive(any(linked_low_1_def %in% df1()$food_id) && any(linked_high_1_def %in% df1()$food_id))
+  output$linkedFoods2 <- reactive(any(linked_low_2_def %in% df1()$food_id) && any(linked_high_2_def %in% df1()$food_id))
   output$sizeFoods <- reactive(nrow(df1()))
 
 
@@ -1801,6 +2243,10 @@ server <- function(input, output, session){
     updateSelectizeInput(inputId = 'pair_2_lower_input', choices = df1()$food_name[!((df1()$food_name %in% input$pair_1_lower_input)|(df1()$food_name %in% input$pair_1_higher_input))])
   })
   
+  observe({
+    updateSelectizeInput(inputId = 'pair_2_higher_input', choices = df1()$food_name[!((df1()$food_name %in% input$pair_1_lower_input)|(df1()$food_name %in% input$pair_1_higher_input)|(df1()$food_name %in% input$pair_2_lower_input))])
+  })
+  
   observeEvent(input$reset_pair_linked_1, {
     shinyjs::reset("pair_1_lower_input")
     shinyjs::enable('pair_1_lower_input')
@@ -1823,54 +2269,58 @@ server <- function(input, output, session){
   
   observeEvent(
     input$constraints_data_input,
-    {df_foods_input <- verifyTabFile(input$constraints_data_input$datapath, 'food_constraints', 'constraints_data_input')
+    {x1c <- x2c <- x3c <-  x4c <- x5c <- x6c <- x7c <- x8c <- x9c <- x10c <- x11c <- x12c <- x13c <- x14c <- x15c <- x16c <- x17c <- x18c <- 0
+    df_foods_input <- verifyTabFile(input$constraints_data_input$datapath, 'food_constraints', 'constraints_data_input')
     df_food_groups_input <- verifyTabFile(input$constraints_data_input$datapath, 'food_group_constraints', 'constraints_data_input')
     df_nutrients_input <- verifyTabFile(input$constraints_data_input$datapath, 'nutrient_targets', 'constraints_data_input')
 
-    verifyColumnNames(df_foods_input, model_foods_cons_names, 'food_constraints', 'constraints_data_input')
-    verifyColumnNames(df_food_groups_input, model_food_groups_cons_names, 'food_group_constraints', 'constraints_data_input')
-    verifyColumnNames(df_nutrients_input, model_nutrients_cons_names, 'nutrient_targets', 'constraints_data_input')
+    x1c <- verifyColumnNames(df_foods_input, model_foods_cons_names, 'food_constraints', 'constraints_data_input', c('food_group', 'food_name', 'food_id', 'size', 'min', 'max'))
+    x2c <- verifyColumnNames(df_food_groups_input, model_food_groups_cons_names, 'food_group_constraints', 'constraints_data_input', c('food_group', 'min_g',	'max_g',	'min_serve',	'max_serve'))
+    x3c <- verifyColumnNames(df_nutrients_input, model_nutrients_cons_names, 'nutrient_targets', 'constraints_data_input')
 
-    if(!identical(sort(unique(df1()$food_id)),sort(unique(df_foods_input$food_id)))){
-      showModal(
-        modalDialog(
-          title = 'Warning!',
-          p("Sheet ", strong('food_constraints')," has distinct food IDs from food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-          
+    if('food_id' %in% names(df1()) && 'food_id' %in% names(df_foods_input)){
+      if(!identical(sort(unique(df1()$food_id)),sort(unique(df_foods_input$food_id)))){
+        showModal(
+          modalDialog(
+            title = 'Warning!',
+            p("Sheet ", strong('food_constraints')," has distinct food IDs from food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+            
+          )
         )
-      )
-      
-      shinyjs::reset('constraints_data_input')
+        
+        shinyjs::reset('constraints_data_input')
+      } else x4c <- 1
     }
-    
-    if(!identical(sort(unique(df1()$food_group)),sort(unique(df_foods_input$food_group)))){
-      showModal(
-        modalDialog(
-          title = 'Warning!',
-          p("Sheet ", strong('food_constraints')," has distinct food groups from food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-          
+    if('food_group' %in% names(df1()) && 'food_group' %in% names(df_foods_input)){
+      if(!identical(sort(unique(df1()$food_group)),sort(unique(df_foods_input$food_group)))){
+        showModal(
+          modalDialog(
+            title = 'Warning!',
+            p("Sheet ", strong('food_constraints')," has distinct food groups from food data. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+            
+          )
         )
-      )
-      
-      shinyjs::reset('constraints_data_input')
+        
+        shinyjs::reset('constraints_data_input')
+      } else x5c <- 1
     }
-    
-    if(!identical(sort(unique(df_food_groups_input$food_group)), sort(unique(df_foods_input$food_group)))){
-      showModal(
-        modalDialog(
-          title = 'Warning!',
-          p("Sheets ", strong('food_constraints')," and ", strong('food_group_constraints'), " have mismatched food groups. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-          
+    if('food_group' %in% names(df_food_groups_input) && 'food_group' %in% names(df_foods_input)){
+      if(!identical(sort(unique(df_food_groups_input$food_group)), sort(unique(df_foods_input$food_group)))){
+        showModal(
+          modalDialog(
+            title = 'Warning!',
+            p("Sheets ", strong('food_constraints')," and ", strong('food_group_constraints'), " have mismatched food groups. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+            
+          )
         )
-      )
-      
-      shinyjs::reset('constraints_data_input')
+        
+        shinyjs::reset('constraints_data_input')
+      }  else x6c <- 1
     }
-    
-    nonNumericCheck(df_foods_input[,c('size', 'min', 'max')], 'food_constraints', 'constraints_data_input')
-    nonNumericCheck(df_food_groups_input[,c('min_g','max_g','min_serve','max_serve')], 'food_group_constraints', 'constraints_data_input')
-    nonNumericCheck(df_nutrients_input, 'nutrient_targets', 'constraints_data_input')
-    
+    x7c <- nonNumericCheck(df_foods_input, c('size', 'min', 'max'), 'food_constraints', 'constraints_data_input')
+    x8c <- nonNumericCheck(df_food_groups_input, c('min_g','max_g','min_serve','max_serve'), 'food_group_constraints', 'constraints_data_input')
+    x9c <- nutrientValueCheck(df_nutrients_input, 'nutrient_targets', nutrient_pairs, 'constraints_data_input')
+
     for(i in 1:length(nutrient_pairs)){
       if(((nutrient_pairs[[i]][[1]] %in% names(df_nutrients_input)) && !(nutrient_pairs[[i]][[2]] %in% names(df_nutrients_input)))||(!(nutrient_pairs[[i]][[1]] %in% names(df_nutrients_input)) && (nutrient_pairs[[i]][[2]] %in% names(df_nutrients_input)))){
         showModal(
@@ -1882,10 +2332,12 @@ server <- function(input, output, session){
         )
         
         shinyjs::reset('constraints_data_input')
+        break
+      } else{
+        if(i == length(nutrient_pairs)) x10c <- 1
       }
     }
-    
-    
+
     for(i in 1:length(np)){
       if((np[[i]][[1]] %in% names(df_nutrients_input)) && !(nutrient_colnames[i] %in% names(df1()))){
         showModal(
@@ -1897,24 +2349,11 @@ server <- function(input, output, session){
         )
         
         shinyjs::reset('constraints_data_input')
+        break
+      } else{
+        if(i == length(np)) x11c <- 1
       }
     }
-    
-    for(i in 1:length(nutrient_pairs)){
-        if(nutrient_pairs[[i]][[1]] %in% names(df_nutrients_input) && !is.na(df_nutrients_input[nutrient_pairs[[i]][[1]]]) && !is.na(df_nutrients_input[nutrient_pairs[[i]][[2]]]) && df_nutrients_input[nutrient_pairs[[i]][[1]]] > df_nutrients_input[nutrient_pairs[[i]][[2]]]){
-          showModal(
-            modalDialog(
-              title = 'Warning!',
-              p("There are minimum nutrient constraints that exceed its maximum value. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-              
-            )
-          )
-          
-          shinyjs::reset('constraints_data_input')
-        }
-
-    }
-    
     if(any(grepl('perc', names(df_nutrients_input))) && !('energy_kj_g' %in% names(df1()))){
       showModal(
         modalDialog(
@@ -1925,8 +2364,8 @@ server <- function(input, output, session){
       )
       
       shinyjs::reset('constraints_data_input')
-    }
-    
+    }  else x12c <- 1
+
     for(i in 1:length(nperc)){
       if(nperc[[i]][[1]] %in% names(df_nutrients_input)){
         if(!(n_b[i] %in% names(df1()))){
@@ -1939,6 +2378,7 @@ server <- function(input, output, session){
           )
           
           shinyjs::reset('constraints_data_input')
+          break
         }
         if(df_nutrients_input[nperc[[i]][[1]]]<0||df_nutrients_input[nperc[[i]][[2]]]>100){
           showModal(
@@ -1950,16 +2390,17 @@ server <- function(input, output, session){
           )
           
           shinyjs::reset('constraints_data_input')
+          break
+        }  else{
+          if(i == length(nperc)) x13c <- 1
         }
       }
       
     }
-    
 
-    verifySpecialGroups('alcohol_perc_min', 'Alcohol', df_nutrients_input, df1()$food_group, 'constraints_data_input')
-    verifySpecialGroups('discretionary_perc_min', 'Discretionary foods', df_nutrients_input, df1()$food_group, 'constraints_data_input')
-    verifySpecialGroups('takeaway_perc_min', 'Takeaway', df_nutrients_input, df1()$food_group, 'constraints_data_input')
-    
+    x14c <- verifySpecialGroups('alcohol_perc_min', 'Alcohol', df_nutrients_input, df1()$food_group, 'constraints_data_input')
+    x15c <- verifySpecialGroups('discretionary_perc_min', 'Discretionary foods', df_nutrients_input, df1()$food_group, 'constraints_data_input')
+    x16c <- verifySpecialGroups('takeaway_perc_min', 'Takeaway', df_nutrients_input, df1()$food_group, 'constraints_data_input')
     constraint_inputs$foods <- df_foods_input
     constraint_inputs$food_groups <- df_food_groups_input
     constraint_inputs$nutrients <- df_nutrients_input
@@ -1974,6 +2415,9 @@ server <- function(input, output, session){
       constraint_inputs$linked_1_low <- lk1_low
       constraint_inputs$linked_1_high <- lk1_high
       
+      if(!is.null(constraint_inputs$linked_1_low) && !is.null(constraint_inputs$linked_1_high)){
+        x17c <- 1
+      }
       if('linked_foods_pair_2' %in% sheets){
         lk2 <- verifyLinkedSingleTab(input$constraints_data_input$datapath, 'linked_foods_pair_2', model_linked_names, 'constraints_data_input', df1()$food_id)
         lk2_low <- lk2[['low']]
@@ -1984,6 +2428,10 @@ server <- function(input, output, session){
           
           constraint_inputs$linked_2_low <- lk2_low
           constraint_inputs$linked_2_high <- lk2_high
+          
+          if(!is.null(constraint_inputs$linked_2_low) && !is.null(constraint_inputs$linked_2_high)){
+            x18c <- 1
+          }
         }
         
         
@@ -2001,7 +2449,22 @@ server <- function(input, output, session){
       shinyjs::reset('constraints_data_input')
     }
     
-    
+    if('linked_foods_pair_1' %in% sheets && 'linked_foods_pair_2' %in% sheets){
+      if(x1c + x2c + x3c +  x4c + x5c + x6c + x7c + x8c + x9c + x10c + x11c + x12c + x13c + x14c + x15c + x16c + x17c + x18c == 18){
+        shinyjs::enable('proceed_upload_cons_input')
+        shinyjs::disable('constraints_data_input')
+      }
+    } else if('linked_foods_pair_1' %in% sheets && !('linked_foods_pair_2' %in% sheets)){
+      if(x1c + x2c + x3c +  x4c + x5c + x6c + x7c + x8c + x9c + x10c + x11c + x12c + x13c + x14c + x15c + x16c + x17c == 17){
+        shinyjs::enable('proceed_upload_cons_input')
+        shinyjs::disable('constraints_data_input')
+      }
+    } else{
+      if(x1c + x2c + x3c +  x4c + x5c + x6c + x7c + x8c + x9c + x10c + x11c + x12c + x13c + x14c + x15c + x16c == 16){
+        shinyjs::enable('proceed_upload_cons_input')
+        shinyjs::disable('constraints_data_input')
+      }
+    }
 
     
     }
