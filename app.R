@@ -940,24 +940,24 @@ constraint_tabs <- tabPanel('Constraints',
                                   ),
                                   column(width = 3,
                                          conditionalPanel(
-                                           condition = "input.type_constraints_input == 'Pre-loaded profiles' && input.diet_profiles_input != 'Healthy' && input.constraints_panel == 'Nutrient constraints' && (input.person_profiles_input == '45-years old man' || input.person_profiles_input == '37-years old woman') && input.nutrient_columns_input && (input.nutrient_columns_input.indexOf('Alcohol (%)') > -1 || input.nutrient_columns_input.indexOf('Discretionary (%)') > -1 || input.nutrient_columns_input.indexOf('Takeaway (%)') > -1)",
+                                           condition = "input.type_constraints_input == 'Pre-loaded profiles' && input.diet_profiles_input != 'Healthy' && input.constraints_panel == 'Nutrient constraints' && (input.person_profiles_input == '45-years old man' || input.person_profiles_input == '37-years old woman') && input.nutrient_columns_input && (input.nutrient_columns_input.indexOf('Alcohol (%)') > -1 || input.nutrient_columns_input.indexOf('Discretionary (%)') > -1 || input.nutrient_columns_input.indexOf('Takeaway (%)') > -1) && (output.alcoholSelected == true || output.discretionarySelected == true || output.takeawaySelected == true)",
                                            tags$h3(span(HTML('Special groups intake'), style = 'padding-left:15px')),
                                            box(
                                              width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
                                              conditionalPanel(
-                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Alcohol (%)') > -1",
+                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Alcohol (%)') > -1 && output.alcoholSelected == true",
                                                tags$div(class = "slider-custom",
                                                         sliderInput(inputId = 'slider_alcohol_perc_input', label = 'Alcohol energy percentage',
                                                                     min = min_alcohol_perc, max = max_alcohol_perc, value = c(min_alcohol_perc,max_alcohol_perc), step = 1))
                                              ),
                                              conditionalPanel(
-                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Discretionary (%)') > -1",
+                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Discretionary (%)') > -1 && output.discretionarySelected == true",
                                                tags$div(class = "slider-custom",
                                                         sliderInput(inputId = 'slider_discretionary_perc_input', label = 'Discretionary foods energy percentage',
                                                                     min = min_discretionary_perc, max = max_discretionary_perc, value = c(min_discretionary_perc,max_discretionary_perc), step = 1))
                                              ),
                                              conditionalPanel(
-                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Takeaway (%)') > -1",
+                                               condition = "input.nutrient_columns_input && input.nutrient_columns_input.indexOf('Takeaway (%)') > -1 && output.takeawaySelected == true",
                                                tags$div(class = "slider-custom",
                                                         sliderInput(inputId = 'slider_takeaway_perc_input', label = 'Takeaway energy percentage',
                                                                     min = min_takeaway_perc, max = max_takeaway_perc, value = c(min_takeaway_perc,max_takeaway_perc), step = 1))
@@ -1220,20 +1220,8 @@ constraint_tabs <- tabPanel('Constraints',
                                   ),
                                   conditionalPanel(
                                     condition = "(input.type_constraints_input == 'Assemble your own constraints' && input.constraints_panel == 'Nutrient constraints')||(input.type_constraints_input == 'Pre-loaded profiles' && input.constraints_panel == 'Nutrient constraints')",
-                                    column(width = 3,
-                                           tags$h3(span(HTML('Nutrients'), style = 'padding-left:15px')),
-                                           box(
-                                             width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                             checkboxGroupInput(
-                                               "nutrient_columns_input",
-                                               label = NULL,
-                                               choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)'),
-                                               selected = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat', 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
-                                             ),
-                                             br(),
-                                             br()
-                                           )
-                                    )
+                                    uiOutput('nutrientSelectionBox')
+                                    
                                   )
                                   
                                   
@@ -1365,6 +1353,45 @@ constraint_tabs <- tabPanel('Constraints',
                             
 
 
+#Simulation tab
+simulation_tab <- tabPanel("Simulation",
+                           useShinyjs(),
+                           conditionalPanel(
+                             condition = 'input.saving_button == 0 && input.proceed_button == 0 && input.proceed_upload_button == 0 && input.proceed_upload_cons_button == 0 && input.proceed_cons_button == 0 && input.saving_cons_button == 0',
+                             column(width = 4),
+                             column(width = 4,
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    tags$h3(span(HTML('Warning!'), style = 'padding-left:15px')),
+                                    box(
+                                      width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                      p("Please set up your food database at the ", strong('Foods'), " tab and your constraints at ", strong("Constraints"), " before accessing this one.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                    ),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br(),
+                                    br()
+                             ),
+                             column(width = 4),
+                           ),
+                           conditionalPanel(
+                             condition = '(input.saving_button > 0 || input.proceed_button > 0 || input.proceed_upload_button > 0) && (input.proceed_upload_cons_button > 0 || input.proceed_cons_button > 0 || input.saving_cons_button > 0)',
+                           )
+                           )
 
 #General
 ui <- navbarPage(title = 'DIETCOST',
@@ -1448,7 +1475,8 @@ ui <- navbarPage(title = 'DIETCOST',
                  header = tagList(useShinydashboard()),
                  intro_tab,
                  foods_tab,
-                 constraint_tabs)
+                 constraint_tabs,
+                 simulation_tab)
 
 #Server-------------------------------------------------------------------------
 server <- function(input, output, session){
@@ -1504,6 +1532,7 @@ server <- function(input, output, session){
   ))
   
   nutrient_cols <- reactive({
+    req(input$nutrient_columns_input)
     ec <- ef <- esf <- echo <- es <- efib <- ep <- esod <- epperc <-  esfperc <-  efperc <-  echoperc <-  em <-  esperc <-  eaperc <-  edperc <-  etperc <- NULL
     for(i in 1:length(input$nutrient_columns_input)){
       switch(input$nutrient_columns_input[i],
@@ -1613,7 +1642,7 @@ server <- function(input, output, session){
       if(input$type_constraints_input == 'Pre-loaded profiles'){
         columns <- c('food_group', 'food_name', 'food_id', 'serve_size', choices()$foods)
         data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
-      } else{
+       } else{
         restriction_food_values()
       }
     }else{
@@ -1622,6 +1651,7 @@ server <- function(input, output, session){
     
 
   })
+  
   
   df3 <- reactive({
     if(input$type_food_insert_input == 'Assemble food data from our database'){
@@ -1641,8 +1671,22 @@ server <- function(input, output, session){
   df4 <- reactive({
     if(input$type_food_insert_input == 'Assemble food data from our database'){
       if(input$type_constraints_input == 'Pre-loaded profiles'){
+        req(nutrient_cols())
         #columns <- c('energy_mj_min','energy_mj_max','fat_grams_min','fat_grams_max','sat_fat_grams_min','sat_fat_grams_max','CHO_grams_min','CHO_grams_max','sugars_grams_min','sugars_grams_max','fibre_grams_min','fibre_grams_max','protein_grams_min','protein_grams_max','sodium_mgrams_min','sodium_mgrams_max','protein_perc_min','protein_perc_max','sat_fat_perc_min','sat_fat_perc_max','fat_perc_min','fat_perc_max','CHO_perc_min','CHO_perc_max','redmeat_grams_min','redmeat_grams_max','sugars_perc_min','sugars_perc_max','alcohol_perc_min','alcohol_perc_max','discretionary_perc_min','discretionary_perc_max','takeaway_perc_min','takeaway_perc_max')
-        data4() %>% filter(diet == choices()$plan & individual == choices()$nutrient_targets) %>% select(all_of(nutrient_cols())) %>% transposeNutrientsTable()
+        df_prov <- data4() %>% filter(diet == choices()$plan & individual == choices()$nutrient_targets) %>% select(all_of(nutrient_cols())) 
+        if('alcohol_perc_min' %in% nutrient_cols()){
+          df_prov$alcohol_perc_min <- min_groups()$alcohol
+          df_prov$alcohol_perc_max <- max_groups()$alcohol
+        }
+        if('discretionary_perc_min' %in% nutrient_cols()){
+          df_prov$discretionary_perc_min <- min_groups()$discretionary
+          df_prov$discretionary_perc_max <- max_groups()$discretionary
+        }
+        if('takeaway_perc_min' %in% nutrient_cols()){
+          df_prov$takeaway_perc_min <- min_groups()$takeaway
+          df_prov$takeaway_perc_max <- max_groups()$takeaway
+        }
+        df_prov %>% transposeNutrientsTable()
       } else{
         restriction_nutrient_values()
       }
@@ -1876,7 +1920,7 @@ server <- function(input, output, session){
   output$saving_cons_input <- downloadHandler(
     filename = 'constraints_data.xlsx',
     content = function(file){
-      file_content <- list(df2(), df3(), df4(), data.frame(linked_1_low()), data.frame(linked_1_high()), data.frame(linked_2_low()), data.frame(linked_2_high()))
+      file_content <- list(df2(), df3(), df4(), data.frame('low' = linked_1_low()), data.frame('high' = linked_1_high()), data.frame('low' = linked_2_low()), data.frame('high' = linked_2_high()))
       write_xlsx(setNames(file_content, c('Foods', 'Food groups', 'Nutrients', 'Linked 1 - low', 'Linked 1 - high', 'Linked 2 - low', 'Linked 2 - high')), file)
     }
   )
@@ -2101,19 +2145,9 @@ server <- function(input, output, session){
   output$nutrientsConstraintsDisplayOutput <- DT::renderDataTable({
     df_n <- df4()
     df_n2 <- df_n
+    #df4 <- reactive(df_n)
+    
     df_n2$nutrient <- unlist(lapply(df_n2$nutrient, changeNamesNutrientTable))
-    #if('discretionary_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Create your own constraints')){
-    #  df_n$discretionary_perc_min <- min_groups()$discretionary
-    #  df_n$discretionary_perc_max <- max_groups()$discretionary
-    #}
-    #if('alcohol_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Create your own constraints')){
-    #  df_n$alcohol_perc_min <- min_groups()$alcohol
-    #  df_n$alcohol_perc_max <- max_groups()$alcohol
-    #}
-    #if('takeaway_perc_min' %in% names(df_n) && (choices()$load_type == 'Pre-loaded profiles'||choices()$load_type == 'Create your own constraints')){
-    #  df_n$takeaway_perc_min <- min_groups()$takeaway
-    #  df_n$takeaway_perc_max <- max_groups()$takeaway
-    #}
     
     #df4()$energy_mj_min <- df4()$energy_mj_min*1000
     #df4()$energy_mj_max <- df4()$energy_mj_max*1000
@@ -2172,9 +2206,47 @@ server <- function(input, output, session){
     )
   })
   
+  output$nutrientSelectionBox <- renderUI({
+    basic_choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat')
+    if(('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group))){
+      full_choices <- c(basic_choices, 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
+    }  else if(('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group))){
+      full_choices <- c(basic_choices, 'Alcohol (%)', 'Discretionary (%)')
+    } else if(('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group))){
+      full_choices <- c(basic_choices, 'Alcohol (%)', 'Takeaway (%)')
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group))){
+      full_choices <- c(basic_choices, 'Discretionary (%)', 'Takeaway (%)')
+    } else if(('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group))){
+      full_choices <- c(basic_choices, 'Alcohol (%)')
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group))){
+      full_choices <- c(basic_choices, 'Discretionary (%)')
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group))){
+      full_choices <- c(basic_choices, 'Takeaway (%)')
+    } else{
+      full_choices <- basic_choices
+    }
+    column(width = 3,
+           tags$h3(span(HTML('Nutrients'), style = 'padding-left:15px')),
+           box(
+             width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+             checkboxGroupInput(
+               "nutrient_columns_input",
+               label = NULL,
+               choices = full_choices,
+               selected = full_choices
+             ),
+             br(),
+             br()
+           )
+    )
+  })
+  
   output$linkedFoods1 <- reactive(any(linked_low_1_def %in% df1()$food_id) && any(linked_high_1_def %in% df1()$food_id))
   output$linkedFoods2 <- reactive(any(linked_low_2_def %in% df1()$food_id) && any(linked_high_2_def %in% df1()$food_id))
   output$sizeFoods <- reactive(nrow(df1()))
+  output$alcoholSelected <- reactive('Alcohol' %in% unique(df1()$food_group))
+  output$discretionarySelected <- reactive('Discretionary foods' %in% unique(df1()$food_group))
+  output$takeawaySelected <- reactive('Takeaway' %in% unique(df1()$food_group))
 
 
   
@@ -2470,6 +2542,9 @@ server <- function(input, output, session){
     }
   )
 
+  outputOptions(output, "alcoholSelected", suspendWhenHidden = FALSE)
+  outputOptions(output, "discretionarySelected", suspendWhenHidden = FALSE)
+  outputOptions(output, "takeawaySelected", suspendWhenHidden = FALSE)
   outputOptions(output, "linkedFoods1", suspendWhenHidden = FALSE)
   outputOptions(output, "linkedFoods2", suspendWhenHidden = FALSE)
   outputOptions(output, "sizeFoods", suspendWhenHidden = FALSE)
