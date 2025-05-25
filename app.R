@@ -27,8 +27,8 @@ min_grams_food_group <- round(min(food_group_constraints_df[,c('man_min_g', 'wom
 max_grams_food_group <- round(max(food_group_constraints_df[,c('man_max_g', 'woman_max_g', 'boy_max_g', 'girl_max_g')]),0)
 min_serves <- round(min(food_group_constraints_df[,c('man_min_serve', 'woman_min_serve', 'boy_min_serve', 'girl_min_serve')]),0)
 max_serves <- round(max(food_group_constraints_df[,c('man_max_serve', 'woman_max_serve', 'boy_max_serve', 'girl_max_serve')]),0)
-min_energy <- round(min(nutrient_targets_df$energy_mj_min),0)
-max_energy <- round(max(nutrient_targets_df$energy_mj_max),0)
+min_energy <- round(min(nutrient_targets_df$energy_mj_min)*1000,0)
+max_energy <- round(max(nutrient_targets_df$energy_mj_max)*1000,0)
 min_fat <- round(max(nutrient_targets_df$fat_grams_min),0)
 max_fat <- round(max(nutrient_targets_df$fat_grams_max),0)
 min_sat_fat <- round(max(nutrient_targets_df$sat_fat_grams_min),0)
@@ -65,12 +65,14 @@ linked_low_1_def <- c("69016", "69013", "79065")
 linked_high_1_def <- c("80066", "80023")
 linked_low_2_def <- "65021"
 linked_high_2_def <- c("79006", "79088")
+redmeat_ids <- c('71003', '71008', '71041', '81005', '81021', '81022', '81026', '81027', '81029')
 model_foods <- c('food_group', 'food_name', 'food_id', 'CF_gCO2eq', 'WF_l', 'EF_g_m2', 'energy_kj_g', 'fat_g', 'sat_fat_g', 'CHO_g', 'sugars_g', 'fibre_g', 'protein_g', 'sodium_mg', 'price')
 nutrient_colnames <- c('energy_kj_g', 'fat_g', 'sat_fat_g', 'CHO_g', 'sugars_g', 'fibre_g', 'protein_g', 'sodium_mg')
 model_foods_cons_names <- c('food_group','food_name','food_id','size','min','max')
 model_food_groups_cons_names <- c('food_group','min_g','max_g','min_serve','max_serve')
 model_nutrients_cons_names <- c('energy_mj_min', 'energy_mj_max', 'fat_grams_min', 'fat_grams_max', 'sat_fat_grams_min', 'sat_fat_grams_max', 'CHO_grams_min', 'CHO_grams_max', 'sugars_grams_min', 'sugars_grams_max', 'fibre_grams_min', 'fibre_grams_max', 'protein_grams_min', 'protein_grams_max', 'sodium_mgrams_min', 'sodium_mgrams_max', 'protein_perc_min', 'protein_perc_max', 'sat_fat_perc_min', 'sat_fat_perc_max', 'fat_perc_min', 'fat_perc_max', 'CHO_perc_min', 'CHO_perc_max', 'redmeat_grams_min', 'redmeat_grams_max', 'sugars_perc_min', 'sugars_perc_max', 'alcohol_perc_min', 'alcohol_perc_max', 'discretionary_perc_min', 'discretionary_perc_max', 'takeaway_perc_min', 'takeaway_perc_max')
 model_linked_names <- c('low', 'high')
+emission_cols <- c('CF_gCO2eq', 'WF_l', 'EF_g_m2')
 nutrient_pairs <- list(list('energy_mj_min','energy_mj_max'),
                        list('fat_grams_min', 'fat_grams_max'),
                        list('sat_fat_grams_min', 'sat_fat_grams_max'),
@@ -92,6 +94,8 @@ nutrient_pairs <- list(list('energy_mj_min','energy_mj_max'),
 np <- nutrient_pairs[1:8]
 nperc <- nutrient_pairs[c(11,10,12,14,9)]
 n_b <- nutrient_colnames[c(2:5,7)]
+f1 <- 37.7
+f2 <- 16.7
 
 #Functions----------------------------------------------------------------------
 nutritentsTableName <- function(col_name){
@@ -141,9 +145,9 @@ transposeNutrientsTable <- function(df){
   for(i in 1:ncol(df)){
     if(i %% 2 == 0) next else{
       switch(colnames(df)[i],
-             'energy_mj_min' = {n <- 'energy_mj'
-                               min_val <- df$energy_mj_min
-                               max_val <- df$energy_mj_max},
+             'energy_mj_min' = {n <- 'energy_kj_g'
+                               min_val <- df$energy_mj_min*1000
+                               max_val <- df$energy_mj_max*1000},
              
              'fat_grams_min' = {n <- 'fat_g'
                                min_val <- df$fat_grams_min
@@ -303,8 +307,8 @@ tabSelectNutrientFunction <- function(nutrient){
 }
 
 changeNamesNutrientTable <- function(x){
-  if(x == 'energy_mj'){
-    y <- 'Energy (MJ)'
+  if(x == 'energy_kj_g'){
+    y <- 'Energy (kJ)'
   } else if(x == 'fat_g'){
     y <- 'Fat (g)'
   } else if(x == 'sat_fat_g'){
@@ -602,6 +606,63 @@ sample_safe <- function(x) {
     return(sample(x,1))
   }
 }
+
+calculateNutrientsRandomMeal <- function(df, nutrient_colnames){
+  nutrient_c <- names(df)[names(df) %in% nutrient_colnames]
+  
+  col_n <- integer(length(nutrient_c))
+  suppressWarnings(for(i in 1:length(nutrient_c)){
+    col_n[i] <- grep(nutrient_c[i], colnames(df))
+  }) 
+  df <- df %>% mutate(
+        across(
+          .cols = all_of(col_n),
+          .fns = function(x){
+            (x/100)*df$intake
+          }
+        )
+      )
+  return(df)
+}
+
+priceEmissionData <- function(df, emission_cols){
+  if('price' %in% names(df)){
+    df$price <- (df$price/100)*df$intake
+  }
+  if(any(emission_cols %in% names(df))){
+    for(i in 1:length(emission_cols)){
+      df[emission_cols[i]] <- (df[emission_cols[i]]/1000)*df$intake
+    }
+  }
+  return(df)
+  
+}
+
+diff_calc <- function(val, min, max){
+  res <- ifelse((val < min),
+                {val - min},
+                ifelse((val > max),
+                       {val - max},
+                       0))
+  return(res)
+}
+
+checkLinkedFoods <- function(df, low, high){
+  ls <- 0
+  hs <- 0
+  for(i in 1:length(low)){
+    ls <- ifelse((low[i] %in% df$food_id),
+                 {ls + df$serves[df$food_id == low[i]]},
+                 ls)
+  }
+  for(i in 1:length(high)){
+    hs <- ifelse((high[i] %in% df$food_id),
+                 {hs + df$serves[df$food_id == high[i]]},
+                 hs)
+  }
+  net <- hs - ls
+  return(net)
+}
 #Modules------------------------------------------------------------------------
 
 #UI - Food table
@@ -878,7 +939,7 @@ nutrient_constraints_pre_tab <- tabPanel('Nutrient constraints',
 #General tab
 constraint_tabs <- tabPanel('Constraints',
                             conditionalPanel(
-                              condition = 'input.saving_button == 0 && input.proceed_button == 0 && input.proceed_upload_button == 0',
+                              condition = '(input.saving_button == 0 && input.proceed_button == 0 && input.proceed_upload_button == 0) || input.reset_food_button > 0',
                               column(width = 4),
                               column(width = 4,
                                      br(),
@@ -1328,7 +1389,7 @@ constraint_tabs <- tabPanel('Constraints',
                                 )
                               ),
                             conditionalPanel(
-                              condition = 'input.proceed_upload_cons_button > 0 || input.proceed_cons_button > 0 || input.saving_cons_button > 0',
+                              condition = '(input.proceed_upload_cons_button > 0 || input.proceed_cons_button > 0 || input.saving_cons_button > 0) && input.reset_food_button == 0',
                               fluidRow(
                                 br(),
                                 br(),
@@ -1377,7 +1438,7 @@ constraint_tabs <- tabPanel('Constraints',
 simulation_tab <- tabPanel("Simulation",
                            useShinyjs(),
                            conditionalPanel(
-                             condition = 'input.proceed_upload_cons_button == 0 && input.proceed_cons_button == 0 && input.saving_cons_button == 0',
+                             condition = '(input.proceed_upload_cons_button == 0 && input.proceed_cons_button == 0 && input.saving_cons_button == 0) || input.reset_button >0 || input.reset_cons_button > 0',
                              column(width = 4),
                              column(width = 4,
                                     br(),
@@ -1468,17 +1529,18 @@ simulation_tab <- tabPanel("Simulation",
                              column(width = 8,
                                     conditionalPanel(
                                       condition = 'input.run_input > 0',
-                                      tags$h3(span(HTML('Random meal'), style = 'padding-left:15px')),
+                                      tags$h3(span(HTML('Initial random meal'), style = 'padding-left:15px')),
                                       box(
                                         width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                        DTOutput('randomMeal'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                        DTOutput('teste2'),style = "overflow-y: scroll;overflow-x: scroll;"
                                       )
                                       
                                       
                                     )
                                     
-                                    )
-                                    )
+                                    ),
+                             #fluidRow(DTOutput('teste2'),style = "overflow-y: scroll;overflow-x: scroll;")
+                           )
 
                            )
 
@@ -1685,7 +1747,7 @@ server <- function(input, output, session){
       switch(nutrient,
              'Energy' = {n <- 'energy_kj'},
              'Fat' = {n <- 'fat_g'},
-             'Saturated fat' = {n <- 'fat_g'},
+             'Saturated fat' = {n <- 'sat_fat_g'},
              'Carbohydrates' = {n <- 'CHO_g'},
              'Sugars' = {n <- 'sugars_g'},
              'Fibre' = {n <- 'fibre_g'},
@@ -1748,7 +1810,9 @@ server <- function(input, output, session){
     if(input$type_food_insert_input == 'Assemble food data from our database'){
       if(input$type_constraints_input == 'Pre-loaded profiles'){
         columns <- c('food_group', choices()$food_groups)
-        data3() %>% filter(food_group %in% unique(df1()$food_group) & diet == choices()$plan) %>% select(all_of(columns))
+        df_prov <- data3() %>% filter(food_group %in% unique(df1()$food_group) & diet == choices()$plan) %>% select(all_of(columns))
+        colnames(df_prov) <- c('food_group', 'min_g', 'max_g', 'min_serve', 'max_serve')
+        df_prov
       } else{
         restriction_food_group_values()
       }
@@ -2051,6 +2115,17 @@ server <- function(input, output, session){
   })
   
   observe({
+    if(input$reset_food_input == 0){
+      runjs("
+            var click = 0;
+            Shiny.onInputChange('reset_food_button', click)
+            var reset_food_input = document.getElementById('reset_food_input')
+            reset_food_input.onclick = function() {click += 1; Shiny.onInputChange('reset_food_button', click)};
+            ") 
+    }
+  })
+  
+  observe({
     if(is.null(input$saving_cons_input)){
       runjs("
             var click = 0;
@@ -2103,6 +2178,11 @@ server <- function(input, output, session){
             var proceed_upload_input = document.getElementById('proceed_upload_input')
             proceed_upload_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_upload_button', click)};
             
+            var click = 0;
+            Shiny.onInputChange('reset_food_button', click)
+            var reset_food_input = document.getElementById('reset_food_input')
+            reset_food_input.onclick = function() {click += 1; Shiny.onInputChange('reset_food_button', click)};
+            
             ")
       shinyjs::enable('food_data_input')
       shinyjs::disable('proceed_upload_input')
@@ -2123,6 +2203,17 @@ server <- function(input, output, session){
 
   )
   
+  observe({
+    if(input$reset_cons_input == 0){
+      runjs("
+            var click = 0;
+            Shiny.onInputChange('reset_cons_button', click)
+            var reset_cons_input = document.getElementById('reset_cons_input')
+            reset_cons_input.onclick = function() {click += 1; Shiny.onInputChange('reset_cons_button', click)};
+            ") 
+    }
+  })
+  
   observeEvent(
     input$reset_cons_input,
     {
@@ -2141,6 +2232,11 @@ server <- function(input, output, session){
             Shiny.onInputChange('proceed_upload_cons_button', click)
             var proceed_upload_cons_input = document.getElementById('proceed_upload_cons_input')
             proceed_upload_cons_input.onclick = function() {click += 1; Shiny.onInputChange('proceed_upload_cons_button', click)};
+            
+            var click = 0;
+            Shiny.onInputChange('reset_cons_button', click)
+            var reset_cons_input = document.getElementById('reset_cons_input')
+            reset_cons_input.onclick = function() {click += 1; Shiny.onInputChange('reset_cons_button', click)};
             
             ")
       shinyjs::enable('constraints_data_input')
@@ -2222,7 +2318,7 @@ server <- function(input, output, session){
   
   output$foodGroupConstraintsDisplayOutput <- DT::renderDataTable({
     df_fg <- data.frame(df3())
-    colnames(df_fg) <- c('food_group', 'min_g', 'max_g', 'min_serve', 'max_serve')
+    #colnames(df_fg) <- c('food_group', 'min_g', 'max_g', 'min_serve', 'max_serve')
     datatable(
       df_fg,
       colnames = c('Food group', 'Minimum intake (g)', 'Maximum intake (g)', 'Minimum serves', 'Maximum serves'),
@@ -2298,21 +2394,35 @@ server <- function(input, output, session){
   })
   
   output$nutrientSelectionBox <- renderUI({
-    basic_choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)', 'Red meat')
-    if(('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group))){
+    basic_choices = c('Energy', 'Fat', 'Saturated fat', 'Carbohydrates', 'Sugars', 'Fibre', 'Protein', 'Sodium', 'Fat (%)', 'Saturated fat (%)', 'Carbohydrates (%)', 'Sugars (%)', 'Protein (%)')
+    if(('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group)) && any(redmeat_ids %in% unique(df1()$food_id))){
+      full_choices <- c(basic_choices, 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)', 'Red meat')
+    }  else if(('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group)) && !any(redmeat_ids %in% unique(df1()$food_id))){
       full_choices <- c(basic_choices, 'Alcohol (%)', 'Discretionary (%)', 'Takeaway (%)')
-    }  else if(('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group))){
+    }  else if(('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group)) && any(redmeat_ids %in% unique(df1()$food_id))){
+      full_choices <- c(basic_choices, 'Alcohol (%)', 'Discretionary (%)', 'Red meat')
+    } else if(('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group)) && !any(redmeat_ids %in% unique(df1()$food_id))){
       full_choices <- c(basic_choices, 'Alcohol (%)', 'Discretionary (%)')
-    } else if(('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group))){
+    } else if(('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group)) && !any(redmeat_ids %in% unique(df1()$food_id))){
       full_choices <- c(basic_choices, 'Alcohol (%)', 'Takeaway (%)')
-    } else if(!('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group))){
-      full_choices <- c(basic_choices, 'Discretionary (%)', 'Takeaway (%)')
-    } else if(('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group))){
+    } else if(('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group)) && any(redmeat_ids %in% unique(df1()$food_id))){
+      full_choices <- c(basic_choices, 'Alcohol (%)', 'Red meat')
+    } else if(('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group)) && !any(redmeat_ids %in% unique(df1()$food_id))){
       full_choices <- c(basic_choices, 'Alcohol (%)')
-    } else if(!('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group))){
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group)) && !any(redmeat_ids %in% unique(df1()$food_id))){
       full_choices <- c(basic_choices, 'Discretionary (%)')
-    } else if(!('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group))){
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group)) && !any(redmeat_ids %in% unique(df1()$food_id))){
       full_choices <- c(basic_choices, 'Takeaway (%)')
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group)) && any(redmeat_ids %in% unique(df1()$food_id))){
+      full_choices <- c(basic_choices, 'Red meat')
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group)) && any(redmeat_ids %in% unique(df1()$food_id))){
+      full_choices <- c(basic_choices, 'Discretionary (%)', 'Takeaway (%)', 'Red meat')
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && !('Takeaway' %in% unique(df1()$food_group)) && any(redmeat_ids %in% unique(df1()$food_id))){
+      full_choices <- c(basic_choices, 'Discretionary (%)', 'Red meat')
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && ('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group)) && !any(redmeat_ids %in% unique(df1()$food_id))){
+      full_choices <- c(basic_choices, 'Discretionary (%)', 'Takeaway (%)')
+    } else if(!('Alcohol' %in% unique(df1()$food_group)) && !('Discretionary foods' %in% unique(df1()$food_group)) && ('Takeaway' %in% unique(df1()$food_group)) && any(redmeat_ids %in% unique(df1()$food_id))){
+      full_choices <- c(basic_choices, 'Takeaway (%)', 'Red meat')
     } else{
       full_choices <- basic_choices
     }
@@ -2643,16 +2753,32 @@ server <- function(input, output, session){
                  shinyjs::enable('run_input')
                  }
 )
-  
+  path_csv <- reactiveValues(dir_path = NULL)
   observeEvent(input$run_input,
                {if(!is.null(input$run_input)){
                  dir_name <- paste0('results_', format(Sys.time(), "%Y%m%d%H%M%S"))
                  path_dir <- paste0(parseDirPath(volumes, file_path()), '/', dir_name)
+                 path_csv$dir_path <- path_dir
                  dir.create(path_dir)
                }
                shinyjs::enable('stop_input')
+               shinyjs::disable('reset_food_input')
+               shinyjs::disable('reset_cons_input')
+               shinyjs::disable('run_input')
+               shinyjs::disable('folder_input')
+               shinyjs::disable('pick_column')
+               shinyjs::disable('iteration_input')
+               shinyjs::disable('difference_input')
                })
 
+  observeEvent(input$stop_input,
+               { shinyjs::disable('stop_input')
+                 shinyjs::enable('reset_food_input')
+                 shinyjs::enable('reset_cons_input')
+                 shinyjs::enable('folder_input')
+                 shinyjs::enable('pick_column')
+                 shinyjs::enable('iteration_input')
+                 shinyjs::enable('difference_input')})
   
   output$pickerColumn <- renderUI({
     if(('price' %in% names(df1()))||('CF_gCO2eq' %in% names(df1()))||('WF_l' %in% names(df1()))||('EF_g_m2' %in% names(df1()))){
@@ -2758,6 +2884,8 @@ server <- function(input, output, session){
     df6 <- df_prov %>% 
         select(all_of(final_names))
     
+    df6 <- priceEmissionData(calculateNutrientsRandomMeal(df6, nutrient_colnames), emission_cols)
+    
     df6
     
   })
@@ -2812,7 +2940,103 @@ server <- function(input, output, session){
       width = '80%'
     )
   })
+  
+  df7 <- reactive({
+    df_cons <- df4()
+    meal_df <- df6()
+    df_res <- data.frame(nutrient = unique(df_cons$nutrient),
+                         value = double(nrow(df_cons)))
 
+    for(i in 1:nrow(df_res)){
+      switch(df_res$nutrient[i],
+             'energy_kj_g' = {df_res$value[df_res$nutrient == 'energy_kj_g'] <- sum(meal_df$energy_kj_g, na.rm = TRUE)},
+             'fat_g' = {df_res$value[df_res$nutrient == 'fat_g'] <- sum(meal_df$fat_g, na.rm = TRUE)},
+             'sat_fat_g' = {df_res$value[df_res$nutrient == 'sat_fat_g'] <- sum(meal_df$sat_fat_g, na.rm = TRUE)},
+             'CHO_g' = {df_res$value[df_res$nutrient == 'CHO_g'] <- sum(meal_df$CHO_g, na.rm = TRUE)},
+             'sugars_g' = {df_res$value[df_res$nutrient == 'sugars_g'] <- sum(meal_df$sugars_g, na.rm = TRUE)},
+             'protein_g' = {df_res$value[df_res$nutrient == 'protein_g'] <- sum(meal_df$protein_g, na.rm = TRUE)},
+             'fat_perc' = {df_res$value[df_res$nutrient == 'fat_perc'] <- (sum(meal_df$fat_g, na.rm = TRUE)*f1)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+             'sat_fat_perc' = {df_res$value[df_res$nutrient == 'sat_fat_perc'] <- (sum(meal_df$sat_fat_g, na.rm = TRUE)*f1)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+             'CHO_perc' = {df_res$value[df_res$nutrient == 'CHO_perc'] <- (sum(meal_df$CHO_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+             'sugars_perc' = {df_res$value[df_res$nutrient == 'sugars_perc'] <- (sum(meal_df$sugars_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+             'fibre_g' = {df_res$value[df_res$nutrient == 'fibre_g'] <- sum(meal_df$fibre_g, na.rm = TRUE)},
+             'protein_perc' = {df_res$value[df_res$nutrient == 'protein_perc'] <- (sum(meal_df$protein_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+             'redmeat_g' = {df_res$value[df_res$nutrient == 'redmeat_g'] <- sum(meal_df$intake[meal_df$food_id %in% redmeat_ids], na.rm = TRUE)},
+             'sodium_mg' = {df_res$value[df_res$nutrient == 'sodium_mg'] <- sum(meal_df$sodium_mg, na.rm = TRUE)},
+             'alcohol_perc' = {df_res$value[df_res$nutrient == 'alcohol_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Alcohol'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+             'discretionary_perc' = {df_res$value[df_res$nutrient == 'discretionary_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Discretionary foods'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+             'takeaway_perc' = {df_res$value[df_res$nutrient == 'takeaway_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Takeaway'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100}
+      )
+      
+    }
+
+    df_diff <- df_res %>% left_join(df_cons, by = 'nutrient')
+    df_diff$diff <- double(nrow(df_diff))
+    
+    for(i in 1:nrow(df_diff)){
+      df_diff$diff[i] <- diff_calc(as.numeric(df_diff$value[i]), as.numeric(df_diff$min[i]), as.numeric(df_diff$max[i]))
+    }
+    df_diff <- df_diff[,-which(names(df_diff) %in% c('min', 'max', 'value'))]
+    names(df_diff)[names(df_diff) == 'diff'] <- 'value'
+    df_diff
+    
+  })
+  
+  df9 <- reactive({
+    df_cons <- df3()
+    df_meal <- df6()
+    
+    df_serves <- df_meal %>% group_by(food_group) %>% summarise(value = sum(serves))
+    
+    df_diff <- df_serves %>% left_join(df_cons, by = 'food_group')
+    df_diff$diff <- double(nrow(df_diff))                             
+    for(i in 1:nrow(df_diff)){
+      df_diff$diff[i] <- diff_calc(as.numeric(df_diff$value[i]), as.numeric(df_diff$min_serve[i]), as.numeric(df_diff$max_serve[i]))
+    }
+    df_diff <- df_diff[,-which(names(df_diff) %in% c('min_g', 'max_g', 'min_serve','max_serve','value'))]
+    names(df_diff)[names(df_diff) == 'diff'] <- 'value'
+    df_diff
+  })
+  
+  linked_sum_1 <- reactive({
+    l1h <- linked_1_high()
+    l1l <- linked_1_low()
+    df_meal <- df6()
+    l1s <- NULL
+    
+    
+    if(!is.null(l1h) && !is.null(l1l)){
+      l1s <- checkLinkedFoods(df_meal, low = l1l, high = l1h)
+    }
+    
+    l1s
+  })
+  
+  linked_sum_2 <- reactive({
+    l2h <- linked_2_high()
+    l2l <- linked_2_low()
+    df_meal <- df6()
+    l1s <- NULL
+    
+    
+    if(!is.null(l2h) && !is.null(l2l)){
+      l2s <- checkLinkedFoods(df_meal, low = l2l, high = l2h)
+    }
+    
+    l2s
+  })
+  
+  output$teste2 <- DT::renderDataTable({
+    datatable(
+      data.frame(linked_sum_2()),
+      #colnames = names_df,
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
+    
+  })
+  
   outputOptions(output, "alcoholSelected", suspendWhenHidden = FALSE)
   outputOptions(output, "discretionarySelected", suspendWhenHidden = FALSE)
   outputOptions(output, "takeawaySelected", suspendWhenHidden = FALSE)
