@@ -4,6 +4,7 @@ library(shinyWidgets)
 library(shinydashboard)
 library(shinycssloaders)
 library(shinyjs)
+library(shinyFiles)
 library(readxl)
 library(DT)
 library(writexl)
@@ -581,7 +582,26 @@ verifyGeneralIntersect <- function(list_vectors, input_name){
   }
 }
 
+random_plan <- function(df, column, condition){
+  random_parameter <- 0.4
+  for(i in 1:nrow(df)){
+    if(unlist(df[i, column]) %in% condition){
+      selector <- runif(1)
+      if(selector > random_parameter){
+        df <- df[-i,]
+      }
+    }
+  }
+  return(df)
+}
 
+sample_safe <- function(x) {
+  if (length(x) <= 1) {
+    return(x)
+  } else {
+    return(sample(x,1))
+  }
+}
 #Modules------------------------------------------------------------------------
 
 #UI - Food table
@@ -1357,7 +1377,7 @@ constraint_tabs <- tabPanel('Constraints',
 simulation_tab <- tabPanel("Simulation",
                            useShinyjs(),
                            conditionalPanel(
-                             condition = 'input.saving_button == 0 && input.proceed_button == 0 && input.proceed_upload_button == 0 && input.proceed_upload_cons_button == 0 && input.proceed_cons_button == 0 && input.saving_cons_button == 0',
+                             condition = 'input.proceed_upload_cons_button == 0 && input.proceed_cons_button == 0 && input.saving_cons_button == 0',
                              column(width = 4),
                              column(width = 4,
                                     br(),
@@ -1390,7 +1410,76 @@ simulation_tab <- tabPanel("Simulation",
                            ),
                            conditionalPanel(
                              condition = '(input.saving_button > 0 || input.proceed_button > 0 || input.proceed_upload_button > 0) && (input.proceed_upload_cons_button > 0 || input.proceed_cons_button > 0 || input.saving_cons_button > 0)',
-                           )
+                             useShinyjs(),
+                             column(width = 4,
+                                    fluidRow(
+                                      column(width = 12,
+                                             tags$h3(span(HTML('Folder'), style = 'padding-left:15px')),
+                                             box(
+                                               width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                               p("Please select the directory where the results folder will be created.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                               div(style = "display: inline-block; position:relative; left:calc(37.5%);",
+                                                   shinyDirButton(id = 'folder_input', title = '', label = 'Selection', multiple = FALSE)
+                                               )
+                                               
+                                             ),
+                                      )
+                                    ),
+                                    fluidRow(
+                                      
+                                      column(width = 6,
+                                             tags$h3(span(HTML('Iterations'), style = 'padding-left:15px')),
+                                             box(
+                                               width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                               p("Set the number of iterations of the Monte Carlo simulation.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                               numericInput('iteration_input', '', min = 1, max =1000000000, value = 1000000)
+                                             )
+                                      ),
+                                      column(
+                                        width = 6,
+                                        tags$h3(span(HTML('Serve size difference'), style = 'padding-left:15px')),
+                                        box(
+                                          width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                          p("Set the minimum serve size difference.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                                          numericInput('difference_input', '', min = 0.01, max =0.99, value = 0.5)
+                                        )
+                                      )
+                                      
+                                    ),
+                                    #fluidRow(uiOutput('selectColumnsMonteCarlo')),
+                                    uiOutput("pickerColumn"),
+                                    
+                                    fluidRow(
+                                      column(width = 6,
+                                             div(style = "display: inline-block; position:relative; left:calc(73.5%);",
+                                                 shinyjs::disabled(actionButton('run_input', label = 'Run'))
+                                                 
+                                             )
+                                      ),
+                                      fluidRow(
+                                        div(style = "display: inline-block; position:relative; left:calc(0.5%);",
+                                            shinyjs::disabled(actionButton('stop_input', label = 'Stop')))
+                                        
+                                      )
+                                      
+                                    )
+                                    
+                             ),
+                             column(width = 8,
+                                    conditionalPanel(
+                                      condition = 'input.run_input > 0',
+                                      tags$h3(span(HTML('Random meal'), style = 'padding-left:15px')),
+                                      box(
+                                        width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                        DTOutput('randomMeal'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                      )
+                                      
+                                      
+                                    )
+                                    
+                                    )
+                                    )
+
                            )
 
 #General
@@ -1562,12 +1651,12 @@ server <- function(input, output, session){
     df_r <- data.frame(food_group = df1()$food_group,
                        food_name = df1()$food_name,
                        food_id = df1()$food_id)
-    df_r$max_g <- df_r$min_g <- df_r$serve_size <- double(nrow(df1()))
+    df_r$max <- df_r$min <- df_r$size <- double(nrow(df1()))
 
     for(i in 1:nrow(df_r)){
-      df_r$serve_size[i] <- coalesce(input[[paste0('numeric_food_', df_r$food_id[i])]],min_serve_size)
-      df_r$min_g[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][1], min_grams_food)
-      df_r$max_g[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][2], max_grams_food)
+      df_r$size[i] <- coalesce(input[[paste0('numeric_food_', df_r$food_id[i])]],min_serve_size)
+      df_r$min[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][1], min_grams_food)
+      df_r$max[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][2], max_grams_food)
     }
     df_r
   })
@@ -1641,7 +1730,9 @@ server <- function(input, output, session){
     if(input$type_food_insert_input == 'Assemble food data from our database'){
       if(input$type_constraints_input == 'Pre-loaded profiles'){
         columns <- c('food_group', 'food_name', 'food_id', 'serve_size', choices()$foods)
-        data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
+        df_pr <- data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
+        colnames(df_pr) <- c('food_group', 'food_name','food_id','size', 'min', 'max' )
+        df_pr
        } else{
         restriction_food_values()
       }
@@ -2541,6 +2632,186 @@ server <- function(input, output, session){
     
     }
   )
+  
+  volumes = getVolumes()()
+  shinyDirChoose(input, 'folder_input', roots=volumes, filetypes = c('', 'txt', 'csv', 'xlsx'))
+  file_path <- reactive(input$folder_input)
+
+  observeEvent(ignoreNULL = TRUE,
+               eventExpr = {input$folder_input},
+               handlerExpr = {req(is.list(input$folder_input))
+                 shinyjs::enable('run_input')
+                 }
+)
+  
+  observeEvent(input$run_input,
+               {if(!is.null(input$run_input)){
+                 dir_name <- paste0('results_', format(Sys.time(), "%Y%m%d%H%M%S"))
+                 path_dir <- paste0(parseDirPath(volumes, file_path()), '/', dir_name)
+                 dir.create(path_dir)
+               }
+               shinyjs::enable('stop_input')
+               })
+
+  
+  output$pickerColumn <- renderUI({
+    if(('price' %in% names(df1()))||('CF_gCO2eq' %in% names(df1()))||('WF_l' %in% names(df1()))||('EF_g_m2' %in% names(df1()))){
+      if(('price' %in% names(df1()))&&('CF_gCO2eq' %in% names(df1()))&&('WF_l' %in% names(df1()))&&('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Price', 'Carbon footprint', 'Water footprint', 'Ecological footprint')
+      } else if(('price' %in% names(df1()))&&!('CF_gCO2eq' %in% names(df1()))&&('WF_l' %in% names(df1()))&&('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Price', 'Water footprint', 'Ecological footprint')
+      } else if(('price' %in% names(df1()))&&('CF_gCO2eq' %in% names(df1()))&&!('WF_l' %in% names(df1()))&&('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Price', 'Carbon footprint', 'Ecological footprint')
+      } else if(('price' %in% names(df1()))&&('CF_gCO2eq' %in% names(df1()))&&('WF_l' %in% names(df1()))&&!('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Price', 'Carbon footprint', 'Water footprint')
+      } else if(('price' %in% names(df1()))&&!('CF_gCO2eq' %in% names(df1()))&&!('WF_l' %in% names(df1()))&&('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Price', 'Ecological footprint')
+      } else if(('price' %in% names(df1()))&&!('CF_gCO2eq' %in% names(df1()))&&('WF_l' %in% names(df1()))&&!('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Price', 'Water footprint')
+      } else if(('price' %in% names(df1()))&&('CF_gCO2eq' %in% names(df1()))&&!('WF_l' %in% names(df1()))&&!('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Price', 'Carbon footprint')
+      } else if(('price' %in% names(df1()))&&!('CF_gCO2eq' %in% names(df1()))&&!('WF_l' %in% names(df1()))&&!('EF_g_m2' %in% names(df1()))){
+        full_choices <- 'Price'
+      } else if(!('price' %in% names(df1()))&&('CF_gCO2eq' %in% names(df1()))&&!('WF_l' %in% names(df1()))&&!('EF_g_m2' %in% names(df1()))){
+        full_choices <- 'Carbon footprint'
+      } else if(!('price' %in% names(df1()))&&('CF_gCO2eq' %in% names(df1()))&&('WF_l' %in% names(df1()))&&('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Carbon footprint','Water footprint', 'Ecological footprint')
+      } else if(!('price' %in% names(df1()))&&('CF_gCO2eq' %in% names(df1()))&&!('WF_l' %in% names(df1()))&&('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Carbon footprint', 'Ecological footprint')
+      } else if(!('price' %in% names(df1()))&&('CF_gCO2eq' %in% names(df1()))&&('WF_l' %in% names(df1()))&&!('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Carbon footprint', 'Water footprint')
+      } else if(!('price' %in% names(df1()))&&!('CF_gCO2eq' %in% names(df1()))&&('WF_l' %in% names(df1()))&&('EF_g_m2' %in% names(df1()))){
+        full_choices <- c('Water footprint', 'Ecological footprint')
+      }  else if(!('price' %in% names(df1()))&&!('CF_gCO2eq' %in% names(df1()))&&('WF_l' %in% names(df1()))&&!('EF_g_m2' %in% names(df1()))){
+        full_choices <- 'Water footprint'
+      } else {
+        full_choices <- 'Ecological footprint'
+      }
+        column(width = 12,
+               tags$h3(span(HTML('Columns'), style = 'padding-left:15px')),
+               box(
+                 width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                 p("Choose which values will be evaluated by the simulation.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+                 #checkboxGroupInput('columns_mc_input', label = '', choices = full_choices, selected = full_choices)
+                 pickerInput(inputId = 'pick_column', 
+                             label = '', 
+                             choices = full_choices,
+                             selected = full_choices,
+                             options = list(`actions-box` = TRUE),multiple = T)
+                             
+                 )
+               
+               )
+
+      
+    }
+  })
+  
+  df5 <- reactive({
+    df_foods <- df1()
+    df_cons <- df2()
+    
+    df <- df_foods %>% left_join(df_cons[,c('food_id', 'size', 'min', 'max')], by = 'food_id')
+
+    if('Alcohol' %in% df$food_group){
+      df <- random_plan(df, 'food_group', 'Alcohol')
+    }
+    
+    if('Discretionary foods' %in% df_foods$food_group){
+      df <- random_plan(df, 'food_group', 'Discretionary foods')
+    }
+    
+    if('Takeaway' %in% df_foods$food_group){
+      df <- random_plan(df, 'food_group', 'Takeaway')
+    }
+    
+    df$intake <- double(nrow(df))
+    for(i in 1:nrow(df)){
+      
+      ifelse(unlist(df[i,'min'])<=unlist(df[i,'max']),
+             {
+               serve_range <- seq(unlist(df[i,'min']), unlist(df[i,'max']), unlist(df[i,'size'])*input$difference_input)
+               df$intake[i] <- sample_safe(serve_range) 
+             },
+      )
+    }
+    df$serves <- df$intake/df$size
+    df
+  })
+  
+
+  df6 <- reactive({
+    df_prov <- df5()
+    all_names <- names(df_prov)
+    all_names <- all_names[!all_names %in% c('price', 'CF_gCO2eq', 'WF_l', 'EF_g_m2')]
+    list_names <- c()
+    for(i in 1:length(input$pick_column)){
+      switch(input$pick_column[i],
+             'Price' = {list_names <- append(list_names, 'price')},
+             'Carbon footprint' = {list_names <- append(list_names, 'CF_gCO2eq')},
+             'Water footprint' = {list_names <- append(list_names, 'WF_l')},
+             'Ecological footprint' = {list_names <- append(list_names, 'EF_g_m2')}
+      )
+    }
+    
+    final_names <- append(all_names, list_names)
+    df6 <- df_prov %>% 
+        select(all_of(final_names))
+    
+    df6
+    
+  })
+  
+  #observeEvent(ignoreNULL = TRUE,
+  #             eventExpr = {input$columns_mc_input},
+  #             handlerExpr = {req(is.list(input$columns_mc_input))
+  #               cols = c()
+  #              for(i in 1:length(input$columns_mc_input)){
+  #                switch(input$columns_mc_input[i],
+  #                       'Price' = {cols <- append(cols, 'price')},
+  #                       'Carbon footprint' = {cols <- append(col)}
+  #                       )
+  #              }
+  #             }
+  #             
+  #             )
+  
+  output$randomMeal <- DT::renderDataTable({
+    colnames_df <- names(df6())
+    names_df <- c()
+    for(i in 1:length(colnames_df)){
+      switch(colnames_df[i],
+             'food_group' = {names_df <- append(names_df, 'Food group')},
+             'food_name' = {names_df <- append(names_df, 'Name')},
+             'food_id' = {names_df <- append(names_df, 'ID')},
+             'CF_gCO2eq' = {names_df <- append(names_df, 'CF/CO2 (g)')},
+             'WF_l' = {names_df <- append(names_df, 'WF/L')},
+             'EF_g_m2' = {names_df <- append(names_df, 'EF/gm2')},
+             'energy_kj_g' = {names_df <- append(names_df, 'Energy (kj/g)')},
+             'fat_g' = {names_df <- append(names_df, 'Fat (g)')},
+             'sat_fat_g' = {names_df <- append(names_df, 'Saturated fat (g)')},
+             'CHO_g' = {names_df <- append(names_df, 'Carbohydrates (g)')},
+             'sugars_g' = {names_df <- append(names_df, 'Sugars (g)')},
+             'fibre_g' = {names_df <- append(names_df, 'Fibre (g)')},
+             'protein_g' = {names_df <- append(names_df, 'Protein (g)')},
+             'sodium_mg' = {names_df <- append(names_df, 'Sodium (mg)')},
+             'price' = {names_df <- append(names_df, 'Price ($/100 g)')},
+             'size' = {names_df <- append(names_df, 'Serve size (g)')},
+             'min' = {names_df <- append(names_df, 'Minimum intake (g)')},
+             'max' = {names_df <- append(names_df, 'Maximum intake (g)')},
+             'intake' = {names_df <- append(names_df, 'Intake (g)')},
+             'serves' = {names_df <- append(names_df, 'Serves')}
+             )
+    }
+
+    datatable(
+      df6(),
+      colnames = names_df,
+      selection = 'none',
+      rownames = FALSE,
+      width = '80%'
+    )
+  })
 
   outputOptions(output, "alcoholSelected", suspendWhenHidden = FALSE)
   outputOptions(output, "discretionarySelected", suspendWhenHidden = FALSE)
@@ -2548,6 +2819,7 @@ server <- function(input, output, session){
   outputOptions(output, "linkedFoods1", suspendWhenHidden = FALSE)
   outputOptions(output, "linkedFoods2", suspendWhenHidden = FALSE)
   outputOptions(output, "sizeFoods", suspendWhenHidden = FALSE)
+
 
 }
 
