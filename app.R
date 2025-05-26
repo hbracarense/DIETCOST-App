@@ -663,6 +663,63 @@ checkLinkedFoods <- function(df, low, high){
   net <- hs - ls
   return(net)
 }
+
+calculateNutrientsDiff <- function(meal_df, df_cons){
+  df_res <- data.frame(nutrient = unique(df_cons$nutrient),
+                       value = double(nrow(df_cons)))
+  
+  for(i in 1:nrow(df_res)){
+    switch(df_res$nutrient[i],
+           'energy_kj_g' = {df_res$value[df_res$nutrient == 'energy_kj_g'] <- sum(meal_df$energy_kj_g, na.rm = TRUE)},
+           'fat_g' = {df_res$value[df_res$nutrient == 'fat_g'] <- sum(meal_df$fat_g, na.rm = TRUE)},
+           'sat_fat_g' = {df_res$value[df_res$nutrient == 'sat_fat_g'] <- sum(meal_df$sat_fat_g, na.rm = TRUE)},
+           'CHO_g' = {df_res$value[df_res$nutrient == 'CHO_g'] <- sum(meal_df$CHO_g, na.rm = TRUE)},
+           'sugars_g' = {df_res$value[df_res$nutrient == 'sugars_g'] <- sum(meal_df$sugars_g, na.rm = TRUE)},
+           'protein_g' = {df_res$value[df_res$nutrient == 'protein_g'] <- sum(meal_df$protein_g, na.rm = TRUE)},
+           'fat_perc' = {df_res$value[df_res$nutrient == 'fat_perc'] <- (sum(meal_df$fat_g, na.rm = TRUE)*f1)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+           'sat_fat_perc' = {df_res$value[df_res$nutrient == 'sat_fat_perc'] <- (sum(meal_df$sat_fat_g, na.rm = TRUE)*f1)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+           'CHO_perc' = {df_res$value[df_res$nutrient == 'CHO_perc'] <- (sum(meal_df$CHO_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+           'sugars_perc' = {df_res$value[df_res$nutrient == 'sugars_perc'] <- (sum(meal_df$sugars_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+           'fibre_g' = {df_res$value[df_res$nutrient == 'fibre_g'] <- sum(meal_df$fibre_g, na.rm = TRUE)},
+           'protein_perc' = {df_res$value[df_res$nutrient == 'protein_perc'] <- (sum(meal_df$protein_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+           'redmeat_g' = {df_res$value[df_res$nutrient == 'redmeat_g'] <- sum(meal_df$intake[meal_df$food_id %in% redmeat_ids], na.rm = TRUE)},
+           'sodium_mg' = {df_res$value[df_res$nutrient == 'sodium_mg'] <- sum(meal_df$sodium_mg, na.rm = TRUE)},
+           'alcohol_perc' = {df_res$value[df_res$nutrient == 'alcohol_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Alcohol'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+           'discretionary_perc' = {df_res$value[df_res$nutrient == 'discretionary_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Discretionary foods'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+           'takeaway_perc' = {df_res$value[df_res$nutrient == 'takeaway_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Takeaway'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100}
+    )
+    
+  }
+  df_diff <- df_res %>% left_join(df_cons, by = 'nutrient')
+  df_diff$diff <- double(nrow(df_diff))
+  for(i in 1:nrow(df_diff)){
+    df_diff$diff[i] <- diff_calc(as.numeric(df_diff$value[i]), as.numeric(df_diff$min[i]), as.numeric(df_diff$max[i]))
+  }
+  df_diff <- df_diff[,-which(names(df_diff) %in% c('min', 'max', 'value'))]
+  names(df_diff)[names(df_diff) == 'diff'] <- 'value'
+  return(df_diff)
+}
+
+calculateServesDiff <- function(df_cons, df_meal){
+  df_serves <- df_meal %>% group_by(food_group) %>% summarise(value = sum(serves))
+  
+  df_diff <- df_serves %>% left_join(df_cons, by = 'food_group')
+  df_diff$diff <- double(nrow(df_diff))                             
+  for(i in 1:nrow(df_diff)){
+    df_diff$diff[i] <- diff_calc(as.numeric(df_diff$value[i]), as.numeric(df_diff$min_serve[i]), as.numeric(df_diff$max_serve[i]))
+  }
+  df_diff <- df_diff[,-which(names(df_diff) %in% c('min_g', 'max_g', 'min_serve','max_serve','value'))]
+  names(df_diff)[names(df_diff) == 'diff'] <- 'value'
+  return(df_diff)
+}
+
+calculateLinkedSum <- function(df_meal, low, high){
+  ls <- NULL
+  if(!is.null(low) && !is.null(high)){
+    ls <- checkLinkedFoods(df_meal, low, high)
+  }
+  return(ls)
+}
 #Modules------------------------------------------------------------------------
 
 #UI - Food table
@@ -1533,18 +1590,25 @@ simulation_tab <- tabPanel("Simulation",
                                     )
                                     
                              ),
+                             conditionalPanel(
+                               condition = 'input.run_input > 0',
+                               style = "display: none;",
                              column(width = 8,
-                                    conditionalPanel(
-                                      condition = 'input.run_input > 0',
-                                      style = "display: none;",
-                                      tags$h3(span(HTML('Initial random meal'), style = 'padding-left:15px')),
+                                      fluidRow(tags$h3(span(HTML('Initial random meal'), style = 'padding-left:15px')),
                                       box(
                                         width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                        DTOutput('teste2'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                        DTOutput('randomMeal'),style = "overflow-y: scroll;overflow-x: scroll;"
                                       )
                                       
                                       
-                                    )
+                                    ),
+                                    fluidRow(
+                                      tags$h3(span(HTML('Monte Carlo simulation'), style = 'padding-left:15px')),
+                                      box(
+                                        width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                        verbatimTextOutput('log')
+                                      )
+                                    ))
                                     
                                     ),
                              #fluidRow(DTOutput('teste2'),style = "overflow-y: scroll;overflow-x: scroll;")
@@ -2952,72 +3016,25 @@ server <- function(input, output, session){
   df7 <- reactive({
     df_cons <- df4()
     meal_df <- df6()
-    df_res <- data.frame(nutrient = unique(df_cons$nutrient),
-                         value = double(nrow(df_cons)))
-
-    for(i in 1:nrow(df_res)){
-      switch(df_res$nutrient[i],
-             'energy_kj_g' = {df_res$value[df_res$nutrient == 'energy_kj_g'] <- sum(meal_df$energy_kj_g, na.rm = TRUE)},
-             'fat_g' = {df_res$value[df_res$nutrient == 'fat_g'] <- sum(meal_df$fat_g, na.rm = TRUE)},
-             'sat_fat_g' = {df_res$value[df_res$nutrient == 'sat_fat_g'] <- sum(meal_df$sat_fat_g, na.rm = TRUE)},
-             'CHO_g' = {df_res$value[df_res$nutrient == 'CHO_g'] <- sum(meal_df$CHO_g, na.rm = TRUE)},
-             'sugars_g' = {df_res$value[df_res$nutrient == 'sugars_g'] <- sum(meal_df$sugars_g, na.rm = TRUE)},
-             'protein_g' = {df_res$value[df_res$nutrient == 'protein_g'] <- sum(meal_df$protein_g, na.rm = TRUE)},
-             'fat_perc' = {df_res$value[df_res$nutrient == 'fat_perc'] <- (sum(meal_df$fat_g, na.rm = TRUE)*f1)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
-             'sat_fat_perc' = {df_res$value[df_res$nutrient == 'sat_fat_perc'] <- (sum(meal_df$sat_fat_g, na.rm = TRUE)*f1)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
-             'CHO_perc' = {df_res$value[df_res$nutrient == 'CHO_perc'] <- (sum(meal_df$CHO_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
-             'sugars_perc' = {df_res$value[df_res$nutrient == 'sugars_perc'] <- (sum(meal_df$sugars_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
-             'fibre_g' = {df_res$value[df_res$nutrient == 'fibre_g'] <- sum(meal_df$fibre_g, na.rm = TRUE)},
-             'protein_perc' = {df_res$value[df_res$nutrient == 'protein_perc'] <- (sum(meal_df$protein_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
-             'redmeat_g' = {df_res$value[df_res$nutrient == 'redmeat_g'] <- sum(meal_df$intake[meal_df$food_id %in% redmeat_ids], na.rm = TRUE)},
-             'sodium_mg' = {df_res$value[df_res$nutrient == 'sodium_mg'] <- sum(meal_df$sodium_mg, na.rm = TRUE)},
-             'alcohol_perc' = {df_res$value[df_res$nutrient == 'alcohol_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Alcohol'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
-             'discretionary_perc' = {df_res$value[df_res$nutrient == 'discretionary_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Discretionary foods'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
-             'takeaway_perc' = {df_res$value[df_res$nutrient == 'takeaway_perc'] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Takeaway'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100}
-      )
-      
-    }
-
-    df_diff <- df_res %>% left_join(df_cons, by = 'nutrient')
-    df_diff$diff <- double(nrow(df_diff))
-    
-    for(i in 1:nrow(df_diff)){
-      df_diff$diff[i] <- diff_calc(as.numeric(df_diff$value[i]), as.numeric(df_diff$min[i]), as.numeric(df_diff$max[i]))
-    }
-    df_diff <- df_diff[,-which(names(df_diff) %in% c('min', 'max', 'value'))]
-    names(df_diff)[names(df_diff) == 'diff'] <- 'value'
+    df_diff <- calculateNutrientsDiff(meal_df, df_cons)
     df_diff
-    
   })
   
   df9 <- reactive({
     df_cons <- df3()
     df_meal <- df6()
-    
-    df_serves <- df_meal %>% group_by(food_group) %>% summarise(value = sum(serves))
-    
-    df_diff <- df_serves %>% left_join(df_cons, by = 'food_group')
-    df_diff$diff <- double(nrow(df_diff))                             
-    for(i in 1:nrow(df_diff)){
-      df_diff$diff[i] <- diff_calc(as.numeric(df_diff$value[i]), as.numeric(df_diff$min_serve[i]), as.numeric(df_diff$max_serve[i]))
-    }
-    df_diff <- df_diff[,-which(names(df_diff) %in% c('min_g', 'max_g', 'min_serve','max_serve','value'))]
-    names(df_diff)[names(df_diff) == 'diff'] <- 'value'
+    df_diff <- calculateServesDiff(df_cons, df_meal)
     df_diff
+    
   })
   
   linked_sum_1 <- reactive({
     l1h <- linked_1_high()
     l1l <- linked_1_low()
     df_meal <- df6()
-    l1s <- NULL
-    
-    
-    if(!is.null(l1h) && !is.null(l1l)){
-      l1s <- checkLinkedFoods(df_meal, low = l1l, high = l1h)
-    }
-    
-    l1s
+
+   ls <- calculateLinkedSum(df_meal, l1l, l1h)
+   ls
   })
   
   linked_sum_2 <- reactive({
@@ -3036,7 +3053,7 @@ server <- function(input, output, session){
   
   output$teste2 <- DT::renderDataTable({
     datatable(
-      data.frame(linked_sum_2()),
+      data.frame(linked_sum_1()),
       #colnames = names_df,
       selection = 'none',
       rownames = FALSE,
