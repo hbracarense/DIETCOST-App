@@ -11,6 +11,7 @@ library(writexl)
 library(tools)
 library(vroom)
 library(dplyr)
+library(rlang)
 
 #Load data----------------------------------------------------------------------
 foods_df <- read_excel('data.xlsx', sheet = 'food_data')
@@ -97,107 +98,70 @@ n_b <- nutrient_colnames[c(2:5,7)]
 f1 <- 37.7
 f2 <- 16.7
 
+
 #Functions----------------------------------------------------------------------
-nutritentsTableName <- function(col_name){
-  switch(col_name,
-         'energy_mj_min' = 'Energy min (kJ)',  
-         'energy_mj_max' = 'Energy max (kJ)',  
-         'fat_grams_min' = 'Fat min (g)',  
-         'fat_grams_max' = 'Fat max (g)',  
-         'sat_fat_grams_min' = 'Saturated fat min (g)',  
-         'sat_fat_grams_max' = 'Saturated fat max (g)',  
-         'CHO_grams_min' = 'Carbohydrates min (g)',  
-         'CHO_grams_max' = 'Carbohydrates max (g)',  
-         'sugars_grams_min' = 'Sugars min (g)',  
-         'sugars_grams_max' = 'Sugars max (g)',  
-         'fibre_grams_min' = 'Fibre min (g)',  
-         'fibre_grams_max' = 'Fibre max (g)',  
-         'protein_grams_min' = 'Protein min (g)',  
-         'protein_grams_max' = 'Protein max (g)',  
-         'sodium_mgrams_min' = 'Sodium min (mg)',  
-         'sodium_mgrams_max' = 'Sodium max (mg)',  
-         'protein_perc_min' = 'Protein min (%)',  
-         'protein_perc_max' = 'Protein max (%)',  
-         'sat_fat_perc_min' = 'Saturated fat min (%)',  
-         'sat_fat_perc_max' = 'Saturated fat max (%)',  
-         'fat_perc_min' = 'Fat min (%)',  
-         'fat_perc_max' = 'Fat max (%)',  
-         'CHO_perc_min' = 'Carbohydrates min (%)',  
-         'CHO_perc_max' = 'Carbohydrates max (%)',  
-         'redmeat_grams_min' = 'Red meat min (g)',  
-         'redmeat_grams_max' = 'Red meat max (g)',  
-         'sugars_perc_min' = 'Sugars min (%)',  
-         'sugars_perc_max' = 'Sugars max (%)',  
-         'alcohol_perc_min' = 'Alcohol min (%)',  
-         'alcohol_perc_max' = 'Alcohol max (%)',  
-         'discretionary_perc_min' = 'Discretionary min (%)',  
-         'discretionary_perc_max' = 'Discretionary max (%)',  
-         'takeaway_perc_min' = 'Takeaway min (%)',  
-         'takeaway_perc_max' = 'Takeaway max (%)'
-         )
-}
 
 transposeNutrientsTable <- function(df){
   df_res <- data.frame(nutrient = character(0),
                        min = double(0),
                        max = double(0))
-
+  
   for(i in 1:ncol(df)){
     if(i %% 2 == 0) next else{
       switch(colnames(df)[i],
              'energy_mj_min' = {n <- 'energy_kj_g'
-                               min_val <- df$energy_mj_min*1000
-                               max_val <- df$energy_mj_max*1000},
+             min_val <- df$energy_mj_min*1000
+             max_val <- df$energy_mj_max*1000},
              
              'fat_grams_min' = {n <- 'fat_g'
-                               min_val <- df$fat_grams_min
-                               max_val <- df$fat_grams_max},
+             min_val <- df$fat_grams_min
+             max_val <- df$fat_grams_max},
              'sat_fat_grams_min' = {n <- 'sat_fat_g'
-                                 min_val <- df$sat_fat_grams_min
-                                 max_val <- df$sat_fat_grams_max},
+             min_val <- df$sat_fat_grams_min
+             max_val <- df$sat_fat_grams_max},
              'CHO_grams_min' = {n <- 'CHO_g'
-                                   min_val <- df$CHO_grams_min
-                                   max_val <- df$CHO_grams_max},
+             min_val <- df$CHO_grams_min
+             max_val <- df$CHO_grams_max},
              'sugars_grams_min' = {n <- 'sugars_g'
-                               min_val <- df$sugars_grams_min
-                               max_val <- df$sugars_grams_max},
+             min_val <- df$sugars_grams_min
+             max_val <- df$sugars_grams_max},
              'fibre_grams_min' = {n <- 'fibre_g'
-                                   min_val <- df$fibre_grams_min
-                                   max_val <- df$fibre_grams_max},
+             min_val <- df$fibre_grams_min
+             max_val <- df$fibre_grams_max},
              'protein_grams_min' = {n <- 'protein_g'
-                                 min_val <- df$protein_grams_min
-                                 max_val <- df$protein_grams_max},
+             min_val <- df$protein_grams_min
+             max_val <- df$protein_grams_max},
              'sodium_mgrams_min' = {n <- 'sodium_mg'
-                                     min_val <- df$sodium_mgrams_min
-                                     max_val <- df$sodium_mgrams_max},
+             min_val <- df$sodium_mgrams_min
+             max_val <- df$sodium_mgrams_max},
              'protein_perc_min' = {n <- 'protein_perc'
-                                   min_val <- df$protein_perc_min
-                                   max_val <- df$protein_perc_max},
+             min_val <- df$protein_perc_min
+             max_val <- df$protein_perc_max},
              'sat_fat_perc_min' = {n <- 'sat_fat_perc'
-                                   min_val <- df$sat_fat_perc_min
-                                   max_val <- df$sat_fat_perc_max},
+             min_val <- df$sat_fat_perc_min
+             max_val <- df$sat_fat_perc_max},
              'fat_perc_min' = {n <- 'fat_perc'
-                                   min_val <- df$fat_perc_min
-                                   max_val <- df$fat_perc_max},
+             min_val <- df$fat_perc_min
+             max_val <- df$fat_perc_max},
              'CHO_perc_min' = {n <- 'CHO_perc'
-                               min_val <- df$CHO_perc_min
-                               max_val <- df$CHO_perc_max},
+             min_val <- df$CHO_perc_min
+             max_val <- df$CHO_perc_max},
              'redmeat_grams_min' = {n <- 'redmeat_g'
-                               min_val <- df$redmeat_grams_min
-                               max_val <- df$redmeat_grams_max},
+             min_val <- df$redmeat_grams_min
+             max_val <- df$redmeat_grams_max},
              'sugars_perc_min' = {n <- 'sugars_perc'
-                                   min_val <- df$sugars_perc_min
-                                   max_val <- df$sugars_perc_max},
+             min_val <- df$sugars_perc_min
+             max_val <- df$sugars_perc_max},
              'alcohol_perc_min' = {n <- 'alcohol_perc'
-                                   min_val <- df$alcohol_perc_min
-                                   max_val <- df$alcohol_perc_max},
+             min_val <- df$alcohol_perc_min
+             max_val <- df$alcohol_perc_max},
              'discretionary_perc_min' = {n <- 'discretionary_perc'
-                                   min_val <- df$discretionary_perc_min
-                                   max_val <- df$discretionary_perc_max},
+             min_val <- df$discretionary_perc_min
+             max_val <- df$discretionary_perc_max},
              'takeaway_perc_min' = {n <- 'takeaway_perc'
-                                         min_val <- df$takeaway_perc_min
-                                         max_val <- df$takeaway_perc_max}
-             )
+             min_val <- df$takeaway_perc_min
+             max_val <- df$takeaway_perc_max}
+      )
     }
     df_res[nrow(df_res)+1,] <- c(n, min_val, max_val) 
   }
@@ -235,12 +199,12 @@ tabSelectFoodGroupFunction <- function(food_group){
     tags$h4(span(HTML(paste("<b>",food_group,"</b>")), style = 'padding-left:15px')),
     column(width = 6,
            tags$div(class = "slider-custom",
-           sliderInput(inputId = paste0('slider_food_group_g_',food_group), label = "Intake (g)",
-                       min = min_grams_food_group, max = max_grams_food_group, value = c(min_grams_food_group,max_grams_food_group), step = 50))),
+                    sliderInput(inputId = paste0('slider_food_group_g_',food_group), label = "Intake (g)",
+                                min = min_grams_food_group, max = max_grams_food_group, value = c(min_grams_food_group,max_grams_food_group), step = 50))),
     column(width = 6,
            tags$div(class = "slider-custom",
-           sliderInput(inputId = paste0('slider_food_group_s_',food_group), label = "Serves",
-                       min = min_serves, max = max_serves, value = c(min_serves,max_serves), step = 5))
+                    sliderInput(inputId = paste0('slider_food_group_s_',food_group), label = "Serves",
+                                min = min_serves, max = max_serves, value = c(min_serves,max_serves), step = 5))
     )
     
   )
@@ -249,60 +213,60 @@ tabSelectFoodGroupFunction <- function(food_group){
 tabSelectNutrientFunction <- function(nutrient){
   switch(nutrient,
          'Energy' = {n = paste(nutrient, '(kJ)')
-                     n_min = min_energy
-                     n_max = max_energy},
+         n_min = min_energy
+         n_max = max_energy},
          'Fat' = {n = paste(nutrient, '(g)')
-                   n_min = min_fat
-                   n_max = max_fat}, 
+         n_min = min_fat
+         n_max = max_fat}, 
          'Saturated fat' = {n = paste(nutrient, '(g)')
-                           n_min = min_sat_fat
-                           n_max = max_sat_fat}, 
+         n_min = min_sat_fat
+         n_max = max_sat_fat}, 
          'Carbohydrates' = {n = paste(nutrient, '(g)')
-                             n_min = min_CHO
-                             n_max = max_CHO},
+         n_min = min_CHO
+         n_max = max_CHO},
          'Sugars'  = {n = paste(nutrient, '(g)')
-                       n_min = min_sugars
-                       n_max = max_sugars},
+         n_min = min_sugars
+         n_max = max_sugars},
          'Fibre' = {n = paste(nutrient, '(g)')
-                     n_min = min_fibre
-                     n_max = max_fibre},
+         n_min = min_fibre
+         n_max = max_fibre},
          'Protein' = {n = paste(nutrient, '(g)')
-                     n_min = min_protein
-                     n_max = max_protein},
+         n_min = min_protein
+         n_max = max_protein},
          'Sodium' = {n = paste(nutrient, '(mg)')
-                     n_min = min_sodium
-                     n_max = max_sodium},
+         n_min = min_sodium
+         n_max = max_sodium},
          'Fat (%)' = {n = nutrient
-                     n_min = min_fat_perc
-                     n_max = max_fat_perc},
+         n_min = min_fat_perc
+         n_max = max_fat_perc},
          'Saturated fat (%)'= {n = nutrient
-                               n_min = min_sat_fat_perc
-                               n_max = max_sat_fat_perc},
+         n_min = min_sat_fat_perc
+         n_max = max_sat_fat_perc},
          'Carbohydrates (%)' = {n = nutrient
-                               n_min = min_CHO_perc
-                               n_max = max_CHO_perc},
+         n_min = min_CHO_perc
+         n_max = max_CHO_perc},
          'Sugars (%)' = {n = nutrient
-                         n_min = min_sugars_perc
-                         n_max = max_sugars_perc},
+         n_min = min_sugars_perc
+         n_max = max_sugars_perc},
          'Protein (%)' = {n = nutrient
-                         n_min = min_protein_perc
-                         n_max = max_protein_perc},
+         n_min = min_protein_perc
+         n_max = max_protein_perc},
          'Red meat'  = {n = paste(nutrient, '(g)')
-                         n_min = min_redmeat
-                         n_max = max_redmeat},
+         n_min = min_redmeat
+         n_max = max_redmeat},
          'Alcohol (%)'  = {n = nutrient
-                           n_min = min_alcohol_perc
-                           n_max = max_alcohol_perc},
+         n_min = min_alcohol_perc
+         n_max = max_alcohol_perc},
          'Discretionary (%)'  = {n = nutrient
-                                 n_min = min_discretionary_perc
-                                 n_max = max_discretionary_perc},
+         n_min = min_discretionary_perc
+         n_max = max_discretionary_perc},
          'Takeaway (%)'  = {n = nutrient
-                           n_min = min_takeaway_perc
-                           n_max = max_takeaway_perc}
-         )
+         n_min = min_takeaway_perc
+         n_max = max_takeaway_perc}
+  )
   tags$div(class = "slider-custom",
-  sliderInput(inputId = paste0('slider_nutrient_',nutrient), label = n,
-              min = n_min, max = n_max, value = c(n_min,n_max), step = 1))
+           sliderInput(inputId = paste0('slider_nutrient_',nutrient), label = n,
+                       min = n_min, max = n_max, value = c(n_min,n_max), step = 1))
   
 }
 
@@ -348,16 +312,16 @@ changeNamesNutrientTable <- function(x){
 
 verifyTabFile <- function(input_file, sheet_name, input_name){
   df <- tryCatch(expr = {read_excel(input_file, sheet = sheet_name)},
-           error = function(e){
-             showModal(
-               modalDialog(
-                 title = 'Warning!',
-                 p("Sheet ", strong(sheet_name), " wasn't found on file. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
-                 
-               )
-             )
-             
-             shinyjs::reset(input_name)})
+                 error = function(e){
+                   showModal(
+                     modalDialog(
+                       title = 'Warning!',
+                       p("Sheet ", strong(sheet_name), " wasn't found on file. Please check your data and try again.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+                       
+                     )
+                   )
+                   
+                   shinyjs::reset(input_name)})
   if(any(sapply(df,anyNA))){
     showModal(
       modalDialog(
@@ -382,7 +346,7 @@ verifyColumnNames <- function(df,model_names, sheet, input_name, mandatory = NUL
         
       )
     )
-
+    
     shinyjs::reset(input_name)
     return(0)
   }
@@ -512,7 +476,7 @@ verifyLinkedSingleTab <- function(path_name, sheet_name, model, input_name, food
   
   lk_low <- df$low[!is.na(df$low)]
   lk_high <- df$high[!is.na(df$high)]
- 
+  
   if(length(lk_low) == 0 || length(lk_high) == 0){
     showModal(
       modalDialog(
@@ -615,13 +579,13 @@ calculateNutrientsRandomMeal <- function(df, nutrient_colnames){
     col_n[i] <- grep(nutrient_c[i], colnames(df))
   }) 
   df <- df %>% mutate(
-        across(
-          .cols = all_of(col_n),
-          .fns = function(x){
-            (x/100)*df$intake
-          }
-        )
-      )
+    across(
+      .cols = all_of(col_n),
+      .fns = function(x){
+        (x/100)*df$intake
+      }
+    )
+  )
   return(df)
 }
 
@@ -629,10 +593,17 @@ priceEmissionData <- function(df, emission_cols){
   if('price' %in% names(df)){
     df$price <- (df$price/100)*df$intake
   }
-  if(any(emission_cols %in% names(df))){
-    for(i in 1:length(emission_cols)){
-      df[emission_cols[i]] <- (df[emission_cols[i]]/1000)*df$intake
-    }
+  
+  if('CF_gCO2eq' %in% names(df)){
+    df$CF_gCO2eq <- (df$CF_gCO2eq/1000)*df$intake
+  }
+  
+  if('WF_l' %in% names(df)){
+    df$WF_l <- (df$WF_l/1000)*df$intake
+  }
+  
+  if('EF_g_m2' %in% names(df)){
+    df$EF_g_m2 <- (df$EF_g_m2/1000)*df$intake
   }
   return(df)
   
@@ -664,7 +635,7 @@ checkLinkedFoods <- function(df, low, high){
   return(net)
 }
 
-calculateNutrientsDiff <- function(meal_df, df_cons){
+calculateNutrientsTotal <- function(meal_df, df_cons){
   df_res <- data.frame(nutrient = unique(df_cons$nutrient),
                        value = double(nrow(df_cons)))
   
@@ -690,6 +661,10 @@ calculateNutrientsDiff <- function(meal_df, df_cons){
     )
     
   }
+  return(df_res)
+}
+
+calculateNutrientsDiff <- function(df_res, df_cons){
   df_diff <- df_res %>% left_join(df_cons, by = 'nutrient')
   df_diff$diff <- double(nrow(df_diff))
   for(i in 1:nrow(df_diff)){
@@ -700,9 +675,13 @@ calculateNutrientsDiff <- function(meal_df, df_cons){
   return(df_diff)
 }
 
-calculateServesDiff <- function(df_cons, df_meal){
+calculateServes <- function(df_meal){
   df_serves <- df_meal %>% group_by(food_group) %>% summarise(value = sum(serves))
   
+  return(df_serves)
+}
+
+calculateServesDiff <- function(df_cons, df_serves){
   df_diff <- df_serves %>% left_join(df_cons, by = 'food_group')
   df_diff$diff <- double(nrow(df_diff))                             
   for(i in 1:nrow(df_diff)){
@@ -720,6 +699,11 @@ calculateLinkedSum <- function(df_meal, low, high){
   }
   return(ls)
 }
+
+checkZeroDiff <- function(diff){
+  if(all(diff$value == 0)) return(TRUE) else return(FALSE)
+}
+
 #Modules------------------------------------------------------------------------
 
 #UI - Food table
@@ -729,9 +713,9 @@ food_ui <- function(id, group_label){
   tabPanel(group_label,
            box(
              width = 12, solidHeader = FALSE, status = 'warning',
-             DTOutput(NS(id,'food_selection_output')),style = "overflow-y: scroll;overflow-x: scroll;"
+             DTOutput(NS(id,'food_selection_output')) %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"
            )
-    
+           
   )
 }
 
@@ -764,7 +748,18 @@ food_server <- function(id, group_label){
 
 #'Introduction' tab
 intro_tab <- tabPanel('Introduction',
-                      fluidRow())
+                      useShinyjs(),
+                      fluidRow(column(width = 2),
+                               column(width = 8,
+                                      div(
+                                        style = "display: inline-block; position:relative; left:calc(37.5%);",
+                                        downloadButton(
+                                          "dietcost_manual",
+                                          label = "Download manual",
+                                          style = "color: #fff; background-color: #222222; border-color: #fff;"
+                                        )
+                                      )),
+                               column(width = 2)))
 
 #'Foods' tab
 foods_tab <- tabPanel('Foods',
@@ -852,14 +847,14 @@ foods_tab <- tabPanel('Foods',
                                        style = "display: inline-block; position:relative; left:calc(37.5%);",
                                        shinyjs::disabled(                                       
                                          actionButton(
-                                         inputId = "proceed_upload_input",
-                                         label = "Proceed",
-                                         style = "color: #fff; background-color: #222222; border-color: #fff;"
-                                       ))
-
+                                           inputId = "proceed_upload_input",
+                                           label = "Proceed",
+                                           style = "color: #fff; background-color: #222222; border-color: #fff;"
+                                         ))
+                                       
                                      )
-                                  
-                                     ),
+                                     
+                              ),
                               column(width = 4)
                             )
                           ),
@@ -960,8 +955,8 @@ foods_tab <- tabPanel('Foods',
                           )
                         )
                       )
-
-                      )
+                      
+)
 
 #Constraints
 
@@ -997,7 +992,7 @@ constraint_tabs <- tabPanel('Constraints',
                                      br(),
                                      br(),
                                      br()
-                                     ),
+                              ),
                               column(width = 4),
                             ),
                             conditionalPanel(
@@ -1097,11 +1092,11 @@ constraint_tabs <- tabPanel('Constraints',
                                                                     tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
                                                                     fluidRow(
                                                                       column(width = 8, 
-                                                                             uiOutput('foodConstraintsSelectOutput'))
+                                                                             uiOutput('foodConstraintsSelectOutput') %>% withSpinner(type = 4, color = '#000000'))
                                                                     ),
                                                                     tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
                                                                   ),       
-                                                                  DTOutput('foodConstraintsDisplayOutput', width = '95%'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                                  DTOutput('foodConstraintsDisplayOutput', width = '95%') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"
                                                                   
                                                               )
                                                               
@@ -1115,11 +1110,11 @@ constraint_tabs <- tabPanel('Constraints',
                                                                     tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
                                                                     fluidRow(
                                                                       column(width = 8, 
-                                                                             uiOutput('foodGroupConstraintsSelectOutput'))
+                                                                             uiOutput('foodGroupConstraintsSelectOutput') %>% withSpinner(type = 4, color = '#000000'))
                                                                     ),
                                                                     tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
                                                                   ),
-                                                                  DTOutput('foodGroupConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                                  DTOutput('foodGroupConstraintsDisplayOutput') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"
                                                               )
                                                      ),
                                                      tabPanel("Nutrient constraints",
@@ -1130,11 +1125,11 @@ constraint_tabs <- tabPanel('Constraints',
                                                                     tags$h3(span(HTML('Value selection'), style = 'padding-left:15px')),
                                                                     fluidRow(
                                                                       column(width = 8, 
-                                                                             uiOutput('nutrientsConstraintsSelectOutput'))
+                                                                             uiOutput('nutrientsConstraintsSelectOutput') %>% withSpinner(type = 4, color = '#000000'))
                                                                     ),
                                                                     tags$h3(span(HTML('Data display'), style = 'padding-left:15px')),
                                                                   ),
-                                                                  DTOutput('nutrientsConstraintsDisplayOutput'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                                                  DTOutput('nutrientsConstraintsDisplayOutput') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"
                                                               )
                                                               
                                                               
@@ -1167,9 +1162,9 @@ constraint_tabs <- tabPanel('Constraints',
                                                                                    box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
                                                                                        tabsetPanel(
                                                                                          tabPanel('Lower foods',
-                                                                                                  DTOutput('linkedFoodsLowA1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                                  DTOutput('linkedFoodsLowA1Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"),
                                                                                          tabPanel('Higher foods',
-                                                                                                  DTOutput('linkedFoodsHighA1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                                  DTOutput('linkedFoodsHighA1Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;")
                                                                                        )))
                                                                           )
                                                                           
@@ -1192,9 +1187,9 @@ constraint_tabs <- tabPanel('Constraints',
                                                                                    box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
                                                                                        tabsetPanel(
                                                                                          tabPanel('Lower foods',
-                                                                                                  DTOutput('linkedFoodsLowA2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                                  DTOutput('linkedFoodsLowA2Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"),
                                                                                          tabPanel('Higher foods',
-                                                                                                  DTOutput('linkedFoodsHighA2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                                  DTOutput('linkedFoodsHighA2Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;")
                                                                                        )))
                                                                           )
                                                                         )),
@@ -1222,18 +1217,18 @@ constraint_tabs <- tabPanel('Constraints',
                                                                                          tabPanel('Bread/cream',
                                                                                                   tabsetPanel(
                                                                                                     tabPanel('Lower foods',
-                                                                                                             DTOutput('linkedFoodsLowB1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                                             DTOutput('linkedFoodsLowB1Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"),
                                                                                                     tabPanel('Higher foods',
-                                                                                                             DTOutput('linkedFoodsHighB1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                                             DTOutput('linkedFoodsHighB1Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;")
                                                                                                     
                                                                                                   )
                                                                                          ),
                                                                                          tabPanel('Milk/cereal',
                                                                                                   tabsetPanel(
                                                                                                     tabPanel('Lower foods',
-                                                                                                             DTOutput('linkedFoodsLowB2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                                             DTOutput('linkedFoodsLowB2Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"),
                                                                                                     tabPanel('Higher foods',
-                                                                                                             DTOutput('linkedFoodsHighB2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                                             DTOutput('linkedFoodsHighB2Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;")
                                                                                                     
                                                                                                   )
                                                                                          )
@@ -1247,9 +1242,9 @@ constraint_tabs <- tabPanel('Constraints',
                                                                                    box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
                                                                                        tabsetPanel(
                                                                                          tabPanel('Lower foods',
-                                                                                                  DTOutput('linkedFoodsLowC1Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                                  DTOutput('linkedFoodsLowC1Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"),
                                                                                          tabPanel('Higher foods',
-                                                                                                  DTOutput('linkedFoodsHighC1Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                                  DTOutput('linkedFoodsHighC1Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;")
                                                                                          
                                                                                        )
                                                                                    )
@@ -1261,9 +1256,9 @@ constraint_tabs <- tabPanel('Constraints',
                                                                                    box(width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #ffffff",
                                                                                        tabsetPanel(
                                                                                          tabPanel('Lower foods',
-                                                                                                  DTOutput('linkedFoodsLowC2Output'),style = "overflow-y: scroll;overflow-x: scroll;"),
+                                                                                                  DTOutput('linkedFoodsLowC2Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"),
                                                                                          tabPanel('Higher foods',
-                                                                                                  DTOutput('linkedFoodsHighC2Output'),style = "overflow-y: scroll;overflow-x: scroll;")
+                                                                                                  DTOutput('linkedFoodsHighC2Output') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;")
                                                                                          
                                                                                        )
                                                                                    )
@@ -1360,7 +1355,7 @@ constraint_tabs <- tabPanel('Constraints',
                                   conditionalPanel(
                                     condition = "(input.type_constraints_input == 'Assemble your own constraints' && input.constraints_panel == 'Nutrient constraints')||(input.type_constraints_input == 'Pre-loaded profiles' && input.constraints_panel == 'Nutrient constraints')",
                                     style = "display: none;",
-                                    uiOutput('nutrientSelectionBox')
+                                    uiOutput('nutrientSelectionBox') %>% withSpinner(type = 4, color = '#000000')
                                     
                                   )
                                   
@@ -1385,7 +1380,7 @@ constraint_tabs <- tabPanel('Constraints',
                                         label = "Proceed without saving",
                                         style = "color: #fff; background-color: #222222; border-color: #fff;"
                                       )
-                                    )),
+                                      )),
                                   )
                                 )
                                 
@@ -1447,8 +1442,8 @@ constraint_tabs <- tabPanel('Constraints',
                                   ),
                                   column(width = 4)
                                 )
-                                )
-                              ),
+                              )
+                            ),
                             conditionalPanel(
                               condition = '(input.proceed_upload_cons_button > 0 || input.proceed_cons_button > 0 || input.saving_cons_button > 0) && (input.saving_button > 0 || input.proceed_button > 0 || input.proceed_upload_button > 0)',
                               style = "display: none;",
@@ -1492,13 +1487,14 @@ constraint_tabs <- tabPanel('Constraints',
                                 br()
                               )
                             )
-                            )
-                            
+)
+
 
 
 #Simulation tab
 simulation_tab <- tabPanel("Simulation",
                            useShinyjs(),
+                           tags$style(HTML("#log {height:200px}")),
                            conditionalPanel(
                              condition = '(input.proceed_upload_cons_button == 0 && input.proceed_cons_button == 0 && input.saving_cons_button == 0) || input.reset_button >0 || input.reset_cons_button > 0',
                              style = "display: none;",
@@ -1571,8 +1567,7 @@ simulation_tab <- tabPanel("Simulation",
                                       )
                                       
                                     ),
-                                    #fluidRow(uiOutput('selectColumnsMonteCarlo')),
-                                    uiOutput("pickerColumn"),
+                                    uiOutput("pickerColumn") %>% withSpinner(type = 4, color = '#000000'),
                                     
                                     fluidRow(
                                       column(width = 6,
@@ -1590,37 +1585,53 @@ simulation_tab <- tabPanel("Simulation",
                                     )
                                     
                              ),
-                             conditionalPanel(
-                               condition = 'input.run_input > 0',
-                               style = "display: none;",
+                             
                              column(width = 8,
-                                      fluidRow(tags$h3(span(HTML('Initial random meal'), style = 'padding-left:15px')),
-                                      box(
-                                        width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                        DTOutput('randomMeal'),style = "overflow-y: scroll;overflow-x: scroll;"
-                                      )
-                                      
-                                      
+                                    fluidRow(tags$h3(span(HTML('Initial random meal'), style = 'padding-left:15px')),
+                                             box(
+                                               width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                               DTOutput('randomMeal') %>% withSpinner(type = 4, color = '#000000'),style = "overflow-y: scroll;overflow-x: scroll;"
+                                             )
+                                             
+                                             
                                     ),
-                                    fluidRow(
-                                      tags$h3(span(HTML('Monte Carlo simulation'), style = 'padding-left:15px')),
-                                      box(
-                                        width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                                        verbatimTextOutput('log')
-                                      )
-                                    ))
+                                    conditionalPanel(
+                                      condition = 'input.run_input > 0',
+                                      style = "display: none;",
+                                      fluidRow(
+                                        tags$h3(span(HTML('Monte Carlo simulation'), style = 'padding-left:15px')),
+                                        box(
+                                          width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+                                          verbatimTextOutput('log')
+                                        )
+                                      ))
                                     
-                                    ),
+                             ),
                              #fluidRow(DTOutput('teste2'),style = "overflow-y: scroll;overflow-x: scroll;")
-                           )
-
-                           )
+                           ),
+                           fluidRow(uiOutput('exportButtons'))
+                           
+)
 
 #General
 ui <- navbarPage(title = 'DIETCOST',
                  theme = shinytheme("cosmo"),
                  useShinyjs(),
                  tags$head(
+                   tags$script(HTML("
+                                    $(document).ready(function(){
+  var objDiv = document.getElementById('log');
+  // create an observer instance
+  var observer = new MutationObserver(function(mutations) {
+    objDiv.scrollTop = objDiv.scrollHeight - objDiv.clientHeight;
+  });
+  // configuration of the observer
+  var config = {childList: true};
+  // observe objDiv
+  observer.observe(objDiv, config);
+});
+                                    ")),
+                   
                    tags$style(HTML('
                                     rat{height: 60px}
                                     
@@ -1721,22 +1732,22 @@ server <- function(input, output, session){
                                         starchy = food_server('starchy', 'Starchy vegetables'),
                                         takeaway = food_server('takeaway', 'Takeaway'),
                                         vegetables = food_server('vegetables', 'Vegetables')))
-
+  
   
   min_groups <- reactive(list(alcohol = input$slider_alcohol_perc_input[1],
-                                             discretionary = input$slider_discretionary_perc_input[1],
-                                             takeaway = input$slider_takeaway_perc_input[1]))
+                              discretionary = input$slider_discretionary_perc_input[1],
+                              takeaway = input$slider_takeaway_perc_input[1]))
   
   max_groups <- reactive(list(alcohol = input$slider_alcohol_perc_input[2],
-                                             discretionary = input$slider_discretionary_perc_input[2],
-                                             takeaway = input$slider_takeaway_perc_input[2]))
+                              discretionary = input$slider_discretionary_perc_input[2],
+                              takeaway = input$slider_takeaway_perc_input[2]))
   
   choices <- reactive(list(load_type = input$type_constraints_input,
-                            foods = switch (input$person_profiles_input,
-                                                                           '45-years old man' = {c('man_min', 'man_max')},
-                                                                           '37-years old woman' = {c('woman_min', 'woman_max')},
-                                                                           '12-years old boy' = {c('boy_min', 'boy_max')},
-                                                                           '8-years old girl' = {c('girl_min', 'girl_max')}),
+                           foods = switch (input$person_profiles_input,
+                                           '45-years old man' = {c('man_min', 'man_max')},
+                                           '37-years old woman' = {c('woman_min', 'woman_max')},
+                                           '12-years old boy' = {c('boy_min', 'boy_max')},
+                                           '8-years old girl' = {c('girl_min', 'girl_max')}),
                            food_groups = switch (input$person_profiles_input,
                                                  '45-years old man' = {c('man_min_g', 'man_max_g', 'man_min_serve', 'man_max_serve')},
                                                  '37-years old woman' = {c('woman_min_g', 'woman_max_g', 'woman_min_serve', 'woman_max_serve')},
@@ -1747,11 +1758,11 @@ server <- function(input, output, session){
                                                      '37-years old woman' = 'woman',
                                                      '12-years old boy' = 'boy',
                                                      '8-years old girl' = 'girl'),
-                                          plan = switch(input$diet_profiles_input,
-                                                                      'Current' = 'C',
-                                                                      'EAT-Lancet' = 'PF',
-                                                                      'Healthy' = 'H')
-                                          
+                           plan = switch(input$diet_profiles_input,
+                                         'Current' = 'C',
+                                         'EAT-Lancet' = 'PF',
+                                         'Healthy' = 'H')
+                           
   ))
   
   nutrient_cols <- reactive({
@@ -1786,7 +1797,7 @@ server <- function(input, output, session){
                        food_name = df1()$food_name,
                        food_id = df1()$food_id)
     df_r$max <- df_r$min <- df_r$size <- double(nrow(df1()))
-
+    
     for(i in 1:nrow(df_r)){
       df_r$size[i] <- coalesce(input[[paste0('numeric_food_', df_r$food_id[i])]],min_serve_size)
       df_r$min[i] <- coalesce(input[[paste0('slider_food_', df_r$food_id[i])]][1], min_grams_food)
@@ -1817,7 +1828,7 @@ server <- function(input, output, session){
     nutrients <- input$nutrient_columns_input
     for(nutrient in nutrients){
       switch(nutrient,
-             'Energy' = {n <- 'energy_kj'},
+             'Energy' = {n <- 'energy_kj_g'},
              'Fat' = {n <- 'fat_g'},
              'Saturated fat' = {n <- 'sat_fat_g'},
              'Carbohydrates' = {n <- 'CHO_g'},
@@ -1838,15 +1849,15 @@ server <- function(input, output, session){
     }
     df_r
   })
-
+  
   df1 <- reactive({
     if(input$type_food_insert_input == 'Assemble food data from our database'){
       data() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables())) 
     } else{
       food_upload_inputs$foods
-      }
- 
-
+    }
+    
+    
   })
   
   output$teste <- renderPrint({
@@ -1857,7 +1868,7 @@ server <- function(input, output, session){
       }
       text
     })
-
+    
   })
   
   df2 <- reactive({
@@ -1867,14 +1878,14 @@ server <- function(input, output, session){
         df_pr <- data2() %>% filter(food_id %in% c(food_ids$ids$alcohol(), food_ids$ids$beverages(), food_ids$ids$dairy(), food_ids$ids$discretionary(), food_ids$ids$fats(), food_ids$ids$fruit(), food_ids$ids$grains(), food_ids$ids$protein(), food_ids$ids$sauces(), food_ids$ids$starchy(), food_ids$ids$takeaway(), food_ids$ids$vegetables()) & diet == choices()$plan) %>% select(all_of(columns))
         colnames(df_pr) <- c('food_group', 'food_name','food_id','size', 'min', 'max' )
         df_pr
-       } else{
+      } else{
         restriction_food_values()
       }
     }else{
       constraint_inputs$foods
     }
     
-
+    
   })
   
   
@@ -1892,7 +1903,7 @@ server <- function(input, output, session){
       constraint_inputs$food_groups
     }
     
-
+    
   })
   
   df4 <- reactive({
@@ -1918,31 +1929,35 @@ server <- function(input, output, session){
         restriction_nutrient_values()
       }
     }else{
-      constraint_inputs$nutrients
+      if(!is.null(constraint_inputs$nutrients)){
+        constraint_inputs$nutrients %>% transposeNutrientsTable()
+        
+      }
+      
     }
     
-
+    
   })
   
   linked_1_low <- reactive({
     if(input$type_food_insert_input == 'Assemble food data from our database'){
       if(input$type_constraints_input == 'Pre-loaded profiles'){
-      if(any(linked_low_1_def %in% df1()$food_id) && any(linked_high_1_def %in% df1()$food_id)){
-        if(isTRUE(input$linked_foods_1_input)||isTRUE(input$linked_foods_t1_input)){
-          df1() %>% filter(food_id %in% linked_low_1_def) %>% pull(food_id)
+        if(any(linked_low_1_def %in% df1()$food_id) && any(linked_high_1_def %in% df1()$food_id)){
+          if(isTRUE(input$linked_foods_1_input)||isTRUE(input$linked_foods_t1_input)){
+            df1() %>% filter(food_id %in% linked_low_1_def) %>% pull(food_id)
+          } else NULL
         } else NULL
-      } else NULL
-    }else{
-      if(isTRUE(input$linked_foods_l1_input)){
-        if(length(input$pair_1_lower_input) > 0 && length(input$pair_1_higher_input) > 0){
-          df1() %>% filter(food_name %in% input$pair_1_lower_input) %>% pull(food_id)
+      }else{
+        if(isTRUE(input$linked_foods_l1_input)){
+          if(length(input$pair_1_lower_input) > 0 && length(input$pair_1_higher_input) > 0){
+            df1() %>% filter(food_name %in% input$pair_1_lower_input) %>% pull(food_id)
+          } else NULL
         } else NULL
-      } else NULL
-    }} else{
-      constraint_inputs$linked_1_low
-    }
+      }} else{
+        constraint_inputs$linked_1_low
+      }
     
-
+    
     
   })
   
@@ -2040,9 +2055,9 @@ server <- function(input, output, session){
                                             )
                                             shinyjs::reset('food_data_input')
                                             x1f <- 0
-                                            })
-  
-                  if(any(!(names(df_food_data) %in% model_foods))){
+                                          })
+                 
+                 if(any(!(names(df_food_data) %in% model_foods))){
                    showModal(
                      modalDialog(
                        title = 'Warning!',
@@ -2052,9 +2067,9 @@ server <- function(input, output, session){
                    )
                    
                    shinyjs::reset('food_data_input')
-                   } else x2f <- 1
+                 } else x2f <- 1
                  
-
+                 
                  if(any(!(c('food_group','food_name','food_id') %in% names(df_food_data)))){
                    showModal(
                      modalDialog(
@@ -2066,7 +2081,7 @@ server <- function(input, output, session){
                    
                    shinyjs::reset('food_data_input')
                  } else x3f <- 1
-
+                 
                  
                  if("food_id" %in% names(df_food_data)){
                    if(any(is.na(df_food_data$food_id))||(length(unique(df_food_data$food_id))!=nrow(df_food_data))||length(whichNonnum(df_food_data$food_id))>0){
@@ -2107,7 +2122,7 @@ server <- function(input, output, session){
                    
                    shinyjs::reset('food_data_input')
                  }  else x6f <- 1
-                  
+                 
                  for(i in 4:length(model_foods)){
                    if(model_foods[i] %in% names(df_food_data)){
                      if((any(grepl('[a-zA-Z]',as.character(df_food_data[[model_foods[i]]]))))||(any(is.na(df_food_data[model_foods[i]])))){
@@ -2129,14 +2144,14 @@ server <- function(input, output, session){
                  
                  
                  if(x1f + x2f + x3f + x4f + x5f + x6f  + x7f == 7){
-                     food_upload_inputs$foods <- df_food_data
-                     shinyjs::enable('proceed_upload_input')
-                     shinyjs::disable('food_data_input')
-                   }
-                    
+                   food_upload_inputs$foods <- df_food_data
+                   shinyjs::enable('proceed_upload_input')
+                   shinyjs::disable('food_data_input')
+                 }
+                 
                })
   
-
+  
   output$saving_input <- downloadHandler(
     filename = 'food_data.xlsx',
     content = function(file){
@@ -2270,9 +2285,9 @@ server <- function(input, output, session){
                                                                                       starchy = NULL,
                                                                                       takeaway = NULL,
                                                                                       vegetables = NULL))))
-
+      
     }
-
+    
   )
   
   observe({
@@ -2325,7 +2340,7 @@ server <- function(input, output, session){
     }
     
   )
-
+  
   observeEvent(
     input$nutrient_columns_input,
     {
@@ -2340,6 +2355,13 @@ server <- function(input, output, session){
           });
             "
       )
+    }
+  )
+  
+  output$dietcost_manual <- downloadHandler(
+    filename = 'dietcost_manual.pdf',
+    content = function(file){
+      file.copy('www/dietcost_manual.pdf',file)
     }
   )
   
@@ -2358,13 +2380,13 @@ server <- function(input, output, session){
   )
   
   
-
+  
   
   output$foodConstraintsSelectOutput <- renderUI({
     tabs <- lapply(sort(unique(df1()$food_group)), tabSelectFoodFunction, df = df1())
     do.call(tabsetPanel, tabs)
-
-
+    
+    
   })
   
   output$foodGroupConstraintsSelectOutput <- renderUI({
@@ -2400,7 +2422,7 @@ server <- function(input, output, session){
     )
   })
   
-
+  
   output$nutrientsConstraintsDisplayOutput <- DT::renderDataTable({
     df_n <- df4()
     df_n2 <- df_n
@@ -2520,8 +2542,8 @@ server <- function(input, output, session){
   output$alcoholSelected <- reactive('Alcohol' %in% unique(df1()$food_group))
   output$discretionarySelected <- reactive('Discretionary foods' %in% unique(df1()$food_group))
   output$takeawaySelected <- reactive('Takeaway' %in% unique(df1()$food_group))
-
-
+  
+  
   
   observe({
     updateSelectizeInput(inputId = 'pair_1_lower_input', choices = df1()$food_name)
@@ -2551,7 +2573,7 @@ server <- function(input, output, session){
       
     }
     
-
+    
   })
   
   observe({
@@ -2577,7 +2599,7 @@ server <- function(input, output, session){
       }
     }
     
-
+    
   })
   
   observe({
@@ -2618,11 +2640,11 @@ server <- function(input, output, session){
     df_foods_input <- verifyTabFile(input$constraints_data_input$datapath, 'food_constraints', 'constraints_data_input')
     df_food_groups_input <- verifyTabFile(input$constraints_data_input$datapath, 'food_group_constraints', 'constraints_data_input')
     df_nutrients_input <- verifyTabFile(input$constraints_data_input$datapath, 'nutrient_targets', 'constraints_data_input')
-
+    
     x1c <- verifyColumnNames(df_foods_input, model_foods_cons_names, 'food_constraints', 'constraints_data_input', c('food_group', 'food_name', 'food_id', 'size', 'min', 'max'))
     x2c <- verifyColumnNames(df_food_groups_input, model_food_groups_cons_names, 'food_group_constraints', 'constraints_data_input', c('food_group', 'min_g',	'max_g',	'min_serve',	'max_serve'))
     x3c <- verifyColumnNames(df_nutrients_input, model_nutrients_cons_names, 'nutrient_targets', 'constraints_data_input')
-
+    
     if('food_id' %in% names(df1()) && 'food_id' %in% names(df_foods_input)){
       if(!identical(sort(unique(df1()$food_id)),sort(unique(df_foods_input$food_id)))){
         showModal(
@@ -2665,7 +2687,7 @@ server <- function(input, output, session){
     x7c <- nonNumericCheck(df_foods_input, c('size', 'min', 'max'), 'food_constraints', 'constraints_data_input')
     x8c <- nonNumericCheck(df_food_groups_input, c('min_g','max_g','min_serve','max_serve'), 'food_group_constraints', 'constraints_data_input')
     x9c <- nutrientValueCheck(df_nutrients_input, 'nutrient_targets', nutrient_pairs, 'constraints_data_input')
-
+    
     for(i in 1:length(nutrient_pairs)){
       if(((nutrient_pairs[[i]][[1]] %in% names(df_nutrients_input)) && !(nutrient_pairs[[i]][[2]] %in% names(df_nutrients_input)))||(!(nutrient_pairs[[i]][[1]] %in% names(df_nutrients_input)) && (nutrient_pairs[[i]][[2]] %in% names(df_nutrients_input)))){
         showModal(
@@ -2682,7 +2704,7 @@ server <- function(input, output, session){
         if(i == length(nutrient_pairs)) x10c <- 1
       }
     }
-
+    
     for(i in 1:length(np)){
       if((np[[i]][[1]] %in% names(df_nutrients_input)) && !(nutrient_colnames[i] %in% names(df1()))){
         showModal(
@@ -2710,7 +2732,7 @@ server <- function(input, output, session){
       
       shinyjs::reset('constraints_data_input')
     }  else x12c <- 1
-
+    
     for(i in 1:length(nperc)){
       if(nperc[[i]][[1]] %in% names(df_nutrients_input)){
         if(!(n_b[i] %in% names(df1()))){
@@ -2742,7 +2764,7 @@ server <- function(input, output, session){
       }
       
     }
-
+    
     x14c <- verifySpecialGroups('alcohol_perc_min', 'Alcohol', df_nutrients_input, df1()$food_group, 'constraints_data_input')
     x15c <- verifySpecialGroups('discretionary_perc_min', 'Discretionary foods', df_nutrients_input, df1()$food_group, 'constraints_data_input')
     x16c <- verifySpecialGroups('takeaway_perc_min', 'Takeaway', df_nutrients_input, df1()$food_group, 'constraints_data_input')
@@ -2810,7 +2832,7 @@ server <- function(input, output, session){
         shinyjs::disable('constraints_data_input')
       }
     }
-
+    
     
     }
   )
@@ -2818,39 +2840,57 @@ server <- function(input, output, session){
   volumes = getVolumes()()
   shinyDirChoose(input, 'folder_input', roots=volumes, filetypes = c('', 'txt', 'csv', 'xlsx'))
   file_path <- reactive(input$folder_input)
-
+  
   observeEvent(ignoreNULL = TRUE,
                eventExpr = {input$folder_input},
                handlerExpr = {req(is.list(input$folder_input))
                  shinyjs::enable('run_input')
-                 }
-)
+               }
+  )
   path_csv <- reactiveValues(dir_path = NULL)
   observeEvent(input$run_input,
                {if(!is.null(input$run_input)){
                  dir_name <- paste0('results_', format(Sys.time(), "%Y%m%d%H%M%S"))
                  path_dir <- paste0(parseDirPath(volumes, file_path()), '/', dir_name)
                  path_csv$dir_path <- path_dir
-                 dir.create(path_dir)
+                 dir.create(path_csv$dir_path)
                }
-               shinyjs::enable('stop_input')
-               shinyjs::disable('reset_food_input')
-               shinyjs::disable('reset_cons_input')
-               shinyjs::disable('run_input')
-               shinyjs::disable('folder_input')
-               shinyjs::disable('pick_column')
-               shinyjs::disable('iteration_input')
-               shinyjs::disable('difference_input')
+                 shinyjs::enable('stop_input')
+                 shinyjs::disable('reset_food_input')
+                 shinyjs::disable('reset_cons_input')
+                 shinyjs::disable('run_input')
+                 shinyjs::disable('folder_input')
+                 shinyjs::disable('pick_column')
+                 shinyjs::disable('iteration_input')
+                 shinyjs::disable('difference_input')
+                 output$log <- renderText({a$logOutput})
                })
-
+  
   observeEvent(input$stop_input,
                { shinyjs::disable('stop_input')
                  shinyjs::enable('reset_food_input')
                  shinyjs::enable('reset_cons_input')
+                 shinyjs::reset('folder_input')
                  shinyjs::enable('folder_input')
+                 shinyjs::reset('pick_column')
                  shinyjs::enable('pick_column')
+                 shinyjs::reset('iteration_input')
                  shinyjs::enable('iteration_input')
-                 shinyjs::enable('difference_input')})
+                 shinyjs::reset('difference_input')
+                 shinyjs::enable('difference_input')
+                 a$logOutput <- NULL
+                 output$log <- renderText({a$logOutput})
+                 report$results$path_dir <- NULL
+                 report$results$iterations <- NULL
+                 report$results$meals_created <- NULL
+                 report$results$last_meal <- NULL
+                 report$results$iterations_constraints <- NULL
+                 report$results$iterations_fg <- NULL
+                 report$results$nutrients_diff <- NULL
+                 report$results$nutrient_targets_wk <- NULL
+                 report$results$food_groups_wk <- NULL
+                 rv$runLoop <- FALSE}
+  )
   
   output$pickerColumn <- renderUI({
     if(('price' %in% names(df1()))||('CF_gCO2eq' %in% names(df1()))||('WF_l' %in% names(df1()))||('EF_g_m2' %in% names(df1()))){
@@ -2885,22 +2925,22 @@ server <- function(input, output, session){
       } else {
         full_choices <- 'Ecological footprint'
       }
-        column(width = 12,
-               tags$h3(span(HTML('Columns'), style = 'padding-left:15px')),
-               box(
-                 width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
-                 p("Choose which values will be evaluated by the simulation.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
-                 #checkboxGroupInput('columns_mc_input', label = '', choices = full_choices, selected = full_choices)
-                 pickerInput(inputId = 'pick_column', 
-                             label = '', 
-                             choices = full_choices,
-                             selected = full_choices,
-                             options = list(`actions-box` = TRUE),multiple = T)
-                             
-                 )
+      column(width = 12,
+             tags$h3(span(HTML('Columns'), style = 'padding-left:15px')),
+             box(
+               width = 12, solidHeader = FALSE, status = 'warning', style = "border-radius: 5px; background-color: #f2f0eb",
+               p("Choose which values will be evaluated by the simulation.", style ="text-align: justify;", style = "color: black;", style = "font-size:18px;"),
+               #checkboxGroupInput('columns_mc_input', label = '', choices = full_choices, selected = full_choices)
+               pickerInput(inputId = 'pick_column', 
+                           label = '', 
+                           choices = full_choices,
+                           selected = full_choices,
+                           options = list(`actions-box` = TRUE),multiple = T)
                
-               )
-
+             )
+             
+      )
+      
       
     }
   })
@@ -2910,7 +2950,7 @@ server <- function(input, output, session){
     df_cons <- df2()
     
     df <- df_foods %>% left_join(df_cons[,c('food_id', 'size', 'min', 'max')], by = 'food_id')
-
+    
     if('Alcohol' %in% df$food_group){
       df <- random_plan(df, 'food_group', 'Alcohol')
     }
@@ -2937,30 +2977,33 @@ server <- function(input, output, session){
     df
   })
   
-
+  
   df6 <- reactive({
     df_prov <- df5()
     all_names <- names(df_prov)
     all_names <- all_names[!all_names %in% c('price', 'CF_gCO2eq', 'WF_l', 'EF_g_m2')]
     list_names <- c()
-    for(i in 1:length(input$pick_column)){
-      switch(input$pick_column[i],
-             'Price' = {list_names <- append(list_names, 'price')},
-             'Carbon footprint' = {list_names <- append(list_names, 'CF_gCO2eq')},
-             'Water footprint' = {list_names <- append(list_names, 'WF_l')},
-             'Ecological footprint' = {list_names <- append(list_names, 'EF_g_m2')}
-      )
+    if(length(input$pick_column) > 0){
+      for(i in 1:length(input$pick_column)){
+        switch(input$pick_column[i],
+               'Price' = {list_names <- append(list_names, 'price')},
+               'Carbon footprint' = {list_names <- append(list_names, 'CF_gCO2eq')},
+               'Water footprint' = {list_names <- append(list_names, 'WF_l')},
+               'Ecological footprint' = {list_names <- append(list_names, 'EF_g_m2')}
+        )
+      }
     }
-    
     final_names <- append(all_names, list_names)
     df6 <- df_prov %>% 
-        select(all_of(final_names))
+      select(all_of(final_names))
     
     df6 <- priceEmissionData(calculateNutrientsRandomMeal(df6, nutrient_colnames), emission_cols)
     
     df6
     
+    
   })
+  
   
   #observeEvent(ignoreNULL = TRUE,
   #             eventExpr = {input$columns_mc_input},
@@ -2977,7 +3020,9 @@ server <- function(input, output, session){
   #             )
   
   output$randomMeal <- DT::renderDataTable({
-    colnames_df <- names(df6())
+    df_prov <- df6()
+    #df_prov <- priceEmissionData(calculateNutrientsRandomMeal(df_prov, nutrient_colnames), emission_cols)
+    colnames_df <- names(df_prov)
     names_df <- c()
     for(i in 1:length(colnames_df)){
       switch(colnames_df[i],
@@ -3001,11 +3046,11 @@ server <- function(input, output, session){
              'max' = {names_df <- append(names_df, 'Maximum intake (g)')},
              'intake' = {names_df <- append(names_df, 'Intake (g)')},
              'serves' = {names_df <- append(names_df, 'Serves')}
-             )
+      )
     }
-
+    
     datatable(
-      df6(),
+      df_prov,
       colnames = names_df,
       selection = 'none',
       rownames = FALSE,
@@ -3013,54 +3058,6 @@ server <- function(input, output, session){
     )
   })
   
-  df7 <- reactive({
-    df_cons <- df4()
-    meal_df <- df6()
-    df_diff <- calculateNutrientsDiff(meal_df, df_cons)
-    df_diff
-  })
-  
-  df9 <- reactive({
-    df_cons <- df3()
-    df_meal <- df6()
-    df_diff <- calculateServesDiff(df_cons, df_meal)
-    df_diff
-    
-  })
-  
-  linked_sum_1 <- reactive({
-    l1h <- linked_1_high()
-    l1l <- linked_1_low()
-    df_meal <- df6()
-
-   ls <- calculateLinkedSum(df_meal, l1l, l1h)
-   ls
-  })
-  
-  linked_sum_2 <- reactive({
-    l2h <- linked_2_high()
-    l2l <- linked_2_low()
-    df_meal <- df6()
-    l1s <- NULL
-    
-    
-    if(!is.null(l2h) && !is.null(l2l)){
-      l2s <- checkLinkedFoods(df_meal, low = l2l, high = l2h)
-    }
-    
-    l2s
-  })
-  
-  output$teste2 <- DT::renderDataTable({
-    datatable(
-      data.frame(linked_sum_1()),
-      #colnames = names_df,
-      selection = 'none',
-      rownames = FALSE,
-      width = '80%'
-    )
-    
-  })
   
   observeEvent(df4(),
                {
@@ -3071,8 +3068,451 @@ server <- function(input, output, session){
                  
                }
                
-               )
+  )
   
+  a <- reactiveValues(
+    logOutput = "Starting Monte Carlo simulation..."
+  )
+  
+  test1 <- eventReactive(input$run_input, as.numeric(input$iteration_input))
+  rv <- reactiveValues(n = 0,
+                       meal_plan = NULL,
+                       nutrient_targets_wk = NULL,
+                       food_groups_wk = NULL,
+                       min_serve_size_difference = NULL,
+                       linked_high_1 = NULL,
+                       linked_low_1 = NULL,
+                       linked_high_2 = NULL,
+                       linked_low_2 = NULL,
+                       hash_list = NULL,
+                       nutrients_plan = NULL,
+                       nutrients_diff = NULL,
+                       serves_plan = NULL,
+                       serves_diff = NULL,
+                       linked_sum_1 = NULL,
+                       linked_sum_2 = NULL,
+                       iterations_constraints = NULL,
+                       iterations_fg = NULL,
+                       iterations_lk = NULL,
+                       runLoop = FALSE)
+  
+  observeEvent(input$run_input, {
+    rv$n <- 1
+    rv$meal_plan <-data.frame(df6())
+    rv$nutrient_targets_wk <- data.frame(df4())
+    rv$food_groups_wk <- data.frame(df3())
+    rv$min_serve_size_difference <- input$difference_input
+    rv$linked_high_1 <- linked_1_high()
+    rv$linked_low_1 <- linked_1_low()
+    rv$linked_high_2 <- linked_2_high()
+    rv$linked_low_2 <- linked_2_low()
+    rv$hash_list <- list()
+    rv$nutrients_plan <- calculateNutrientsTotal(data.frame(df6()), data.frame(df4()))
+    rv$nutrients_diff <- calculateNutrientsDiff(calculateNutrientsTotal(data.frame(df6()), data.frame(df4())), data.frame(df4()))
+    rv$serves_plan <- calculateServes(data.frame(df6()))
+    rv$serves_diff <- calculateServesDiff(data.frame(df3()), calculateServes(data.frame(df6())))
+    rv$linked_sum_1 <- calculateLinkedSum(df = data.frame(df6()), low = linked_1_low(), high = linked_1_high())
+    rv$linked_sum_2 <- calculateLinkedSum(df = data.frame(df6()), low = linked_2_low(), high = linked_2_high())
+    rv$iterations_constraints <- data.frame(nutrient = calculateNutrientsDiff(calculateNutrientsTotal(data.frame(df6()), data.frame(df4())), data.frame(df4())) %>% pull(nutrient),
+                                            high = integer(nrow(calculateNutrientsDiff(calculateNutrientsTotal(data.frame(df6()), data.frame(df4())), data.frame(df4())))),
+                                            low = integer(nrow(calculateNutrientsDiff(calculateNutrientsTotal(data.frame(df6()), data.frame(df4())), data.frame(df4())))))
+    
+    rv$iterations_fg <- data.frame(food_group = calculateServesDiff(data.frame(df3()), calculateServes(data.frame(df6()))) %>% pull(food_group),
+                                   high = integer(nrow(calculateServesDiff(data.frame(df3()), calculateServes(data.frame(df6()))))),
+                                   low = integer(nrow(calculateServesDiff(data.frame(df3()), calculateServes(data.frame(df6()))))))
+    
+    rv$iterations_lk <- data.frame(link = c('pair_1','pair_2'),
+                                   high = integer(2),
+                                   low = integer(2))
+    rv$runLoop <- TRUE
+  })
+  
+  #output$log <- renderText({a$logOutput})
+  
+  updateLog <- function(text){
+    a$logOutput <- paste(a$logOutput, text, sep = "\n")
+  }
+  
+  report <-reactiveValues(results = list(path_dir = NULL,
+                                         iterations = NULL,
+                                         meals_created = NULL,
+                                         last_meal = NULL,
+                                         iterations_constraints = NULL,
+                                         iterations_fg = NULL,
+                                         iterations_lk = NULL,
+                                         nutrients_diff = NULL,
+                                         serves_diff = NULL,
+                                         nutrient_targets_wk = NULL,
+                                         food_groups_wk = NULL))
+  
+  observe({
+    if(rv$runLoop) invalidateLater(0, session) else return();
+    meal_plan <- rv$meal_plan
+    nutrient_targets_wk <- rv$nutrient_targets_wk
+    food_groups_wk <- rv$food_groups_wk
+    min_serve_size_difference <- rv$min_serve_size_difference
+    linked_high_1 <- rv$linked_high_1
+    linked_low_1 <- rv$linked_low_1
+    linked_high_2 <- rv$linked_high_2
+    linked_low_2 <- rv$linked_low_2
+    hash_list <- rv$hash_list
+    nutrients_plan <- rv$nutrients_plan
+    nutrients_diff <- rv$nutrients_diff
+    serves_plan <- rv$serves_plan
+    serves_diff <- rv$serves_diff
+    off_measures <- NULL
+    off_food_groups <- NULL
+    off_linked_foods_low <- NULL
+    off_linked_foods_high <- NULL
+    target_measure <- NULL
+    target_fg <- NULL
+    serve_range <- NULL
+    food <- NULL
+    
+    linked_sum_1 <- rv$linked_sum_1
+    linked_sum_2 <- rv$linked_sum_2
+    iterations_constraints = rv$iterations_constraints
+    
+    iterations_fg <- rv$iterations_fg
+    
+    iterations_lk <- rv$iterations_lk
+    isolate({
+      
+      if (rv$n > test1()) {
+        report$results$path_dir <- file.path(path_csv$dir_path)
+        report$results$iterations <- as.numeric(input$iteration_input)
+        report$results$meals_created <- length(hash_list)
+        report$results$last_meal <- meal_plan
+        report$results$iterations_constraints <- iterations_constraints
+        report$results$iterations_fg <- iterations_fg
+        report$results$iterations_lk <- iterations_lk
+        report$results$nutrients_diff <- nutrients_diff
+        report$results$nutrient_targets_wk <- nutrient_targets_wk
+        report$results$food_groups_wk <- food_groups_wk
+        rv$runLoop <- FALSE
+        if(as.numeric(report$results$meals_created)>0){
+          showModal(
+            modalDialog(
+              title = 'Diets formed!',
+              p("Please select the confidence interval in which the results will be estimated.",style ="text-align: justify;", style = "color: black;", style = "font-size:18px;", style = 'padding-left:15px;', style = 'padding-right:15px;'),
+              fluidRow(column(width = 2),
+                       column(width = 9,
+                              tags$div(class = "slider-custom",
+                                       sliderInput(inputId = 'confidence_interval_input', label = 'Confidence interval (%)',
+                                                   min = 90, max = 99, value = 95, step = 1))),
+                       column(width = 1))
+              
+              
+            )
+          )
+        }
+        
+        
+        return()
+      } else {
+        if(isTRUE(checkZeroDiff(nutrients_diff))){
+          if(isTRUE(checkZeroDiff(serves_diff))){
+            if((is.null(linked_low_1) && is.null(linked_high_1) && is.null(linked_low_2) && is.null(linked_high_2))||(!is.null(linked_low_1) && !is.null(linked_high_1) && is.null(linked_low_2) && is.null(linked_high_2) && linked_sum_1 >=0)||(!is.null(linked_low_1) && !is.null(linked_high_1) && !is.null(linked_low_2) && !is.null(linked_high_2) && linked_sum_1 >=0 && linked_sum_2 >=0)){
+              hash_diet <- hash(meal_plan)
+              if(!(hash_diet %in% hash_list)){
+                hash_list[[length(hash_list)+1]] <- hash_diet
+                text <- paste0('Iteration: ', rv$n,'. Hit! Unique diet formed!')
+                
+                meal_plan <- priceEmissionData(calculateNutrientsRandomMeal(meal_plan, nutrient_colnames), emission_cols)
+                file_name <- paste0('meal_plan_',rv$n,'.csv')
+                write.csv(meal_plan, file.path(path_csv$dir_path, file_name), row.names=FALSE)
+              } else{
+                text <- paste0('Iteration: ', rv$n,'. Hit! Diet already logged in!')
+              }
+              food = sample_safe(meal_plan$food_id)
+              serve_range <- sort(seq(meal_plan$min[meal_plan$food_id == food], meal_plan$max[meal_plan$food_id == food], meal_plan$size[meal_plan$food_id == food]*min_serve_size_difference))
+            }else{
+              if(!is.null(linked_low_1) && !is.null(linked_high_1) && is.null(linked_low_2) && is.null(linked_high_2) && linked_sum_1 < 0){
+                off_linked_foods_low <- linked_low_1
+                off_linked_foods_high <- linked_high_1
+              } else{
+                if(linked_sum_1 < 0 && linked_sum_2 < 0){
+                  off_linked_foods_low <- c(linked_low_1, linked_low_2)
+                  off_linked_foods_high <- c(linked_high_1, linked_high_2)
+                } else if(linked_sum_1 < 0 && linked_sum_2 >= 0){
+                  off_linked_foods_low <- linked_low_1
+                  off_linked_foods_high <- linked_high_1
+                } else if(linked_sum_1 >= 0 && linked_sum_2 < 0){
+                  off_linked_foods_low <- linked_low_2
+                  off_linked_foods_high <- linked_high_2
+                }
+              }
+              if(length(off_linked_foods_low) > 0 && length(off_linked_foods_high) > 0){
+                direction_choices <- c('<', '>')
+                direction <- sample_safe(direction_choices)
+                if(direction == '<'){
+                  tmp <- meal_plan$food_id[meal_plan$food_id %in% off_linked_foods_low]
+                  food <- sample_safe(tmp)
+                  if(food %in% linked_low_1){
+                    fl <- 'pair_1'
+                  } else{
+                    fl <- 'pair_2'
+                  }
+                  serve_range <- sort(seq(meal_plan$min[meal_plan$food_id == food], meal_plan$intake[meal_plan$food_id == food], meal_plan$size[meal_plan$food_id == food]*min_serve_size_difference))
+                  text <- paste0(c(paste0('Iteration: ', rv$n,'. Food link ', fl, ' is off. ', meal_plan$food_name[meal_plan$food_id == food], ' affects it at lower half. Current intake is ',meal_plan$intake[meal_plan$food_id == food], ' and it must be between ', meal_plan$min[meal_plan$food_id == food], ' and ', meal_plan$max[meal_plan$food_id == food],'. Options: '),serve_range), collapse = " ")
+                  iterations_lk$low[iterations_lk$link == fl] <- iterations_lk$low[iterations_lk$link == fl] + 1
+                } else{
+                  tmp <- meal_plan$food_id[meal_plan$food_id %in% off_linked_foods_high]
+                  food <- sample_safe(tmp)
+                  if(food %in% linked_high_1){
+                    fl <- 'pair_1'
+                  } else{
+                    fl <- 'pair_2'
+                  }
+                  serve_range <- sort(seq(meal_plan$intake[meal_plan$food_id == food], meal_plan$max[meal_plan$food_id == food], meal_plan$size[meal_plan$food_id == food]*min_serve_size_difference))
+                  text <- paste0(c(paste0('Iteration: ', rv$n,'. Food link ', fl, ' is off. ', meal_plan$food_name[meal_plan$food_id == food], ' affects it at upper half. Current intake is ',meal_plan$intake[meal_plan$food_id == food], ' and it must be between ', meal_plan$min[meal_plan$food_id == food], ' and ', meal_plan$max[meal_plan$food_id == food],'. Options: '),serve_range), collapse = " ")
+                  iterations_lk$high[iterations_lk$link == fl] <- iterations_lk$high[iterations_lk$link == fl] + 1
+                }
+              }
+              
+            }
+          }else{
+            off_food_groups <- serves_diff[serves_diff$value != 0,]
+            target_fg <- sample_safe(off_food_groups$food_group)
+            
+            foods_impacted <- meal_plan$food_id[meal_plan$food_group == target_fg]
+            if(length(foods_impacted) == 0){
+              text <- (paste('Iteration: ', rv$n,'. No food impact group: ',target_fg))
+              rv$n <- rv$n + 1
+              rv$meal_plan <- meal_plan
+              rv$hash_list <- hash_list
+              rv$nutrients_plan <- nutrients_plan
+              rv$nutrients_diff <- nutrients_diff
+              rv$serves_plan <- serves_plan
+              rv$serves_diff <- serves_diff
+              rv$linked_sum_1 -> linked_sum_1
+              rv$linked_sum_2 <- linked_sum_2
+              rv$iterations_constraints <- iterations_constraints
+              rv$iterations_fg <- iterations_fg
+              rv$iterations_lk <- iterations_lk
+              updateLog(text)
+            }
+            food <- sample_safe(foods_impacted)
+            fg <- meal_plan$food_group[meal_plan$food_id == food]
+            
+            if(off_food_groups$value[off_food_groups$food_group == target_fg] > 0){
+              text_1 <- paste0('Iteration: ', rv$n,'. Food group ', fg, ' has too many serves. Current: ', serves_plan$value[serves_plan$food_group == target_fg],'. Max: ', food_groups_wk$max[food_groups_wk$food_group == target_fg])
+              serve_range <- sort(seq(meal_plan$min[meal_plan$food_id == food], meal_plan$intake[meal_plan$food_id == food], meal_plan$size[meal_plan$food_id == food]*min_serve_size_difference))
+              iterations_fg$high[iterations_fg$food_group == target_fg] <- iterations_fg$high[iterations_fg$food_group == target_fg] + 1
+            } else{
+              text_1 <- paste0('Iteration: ', rv$n,'. Food group ', fg, ' has too few serves. Current: ', serves_plan$value[serves_plan$food_group == target_fg],'. Min: ', food_groups_wk$min[food_groups_wk$food_group == target_fg])
+              serve_range <- sort(seq(meal_plan$intake[meal_plan$food_id == food], meal_plan$max[meal_plan$food_id == food], meal_plan$size[meal_plan$food_id == food]*min_serve_size_difference))
+              iterations_fg$low[iterations_fg$food_group == target_fg] <- iterations_fg$low[iterations_fg$food_group == target_fg] + 1
+            }
+            text <- paste0(c(paste0(text_1,'. ', meal_plan$food_name[meal_plan$food_id == food]," has current intake of ",meal_plan$intake[meal_plan$food_id == food]," and it must be between ",meal_plan$min[meal_plan$food_id == food]," and ",meal_plan$max[meal_plan$food_id == food],". Options: "),serve_range), collapse = " ")
+            
+            
+          }
+        }else{
+          off_measures <- nutrients_diff[nutrients_diff$value != 0,]
+          target_measure <- sample_safe(off_measures$nutrient)
+          col <- target_measure
+          if(col == 'discretionary_perc'){
+            foods_impacted <- meal_plan %>% filter(food_group == 'Discretionary foods') %>% pull(food_id)
+          } else if(col == 'alcohol_perc'){
+            foods_impacted <- meal_plan %>% filter(food_group == 'Alcohol') %>% pull(food_id)
+          } else if(col == 'takeaway_perc'){
+            foods_impacted <- meal_plan %>% filter(food_group == 'Takeaway') %>% pull(food_id)
+          } else if(col == 'redmeat_g'){
+            foods_impacted <- meal_plan %>% filter(food_id %in% redmeat_ids) %>% pull(food_id)
+          } else{
+            if(grepl('perc', col)){
+              col <- unlist(strsplit(col, '_perc',1))
+              col <- paste0(col, '_g')
+            }
+            foods_impacted <- meal_plan %>% filter(UQ(sym(col)) > 0) %>% pull(food_id)
+          }
+          if(length(foods_impacted) == 0){
+            text <- paste('Iteration: ', rv$n,'. No food impact measure: ',target_measure)
+            rv$n <- rv$n + 1
+            rv$meal_plan <- meal_plan
+            rv$hash_list <- hash_list
+            rv$nutrients_plan <- nutrients_plan
+            rv$nutrients_diff <- nutrients_diff
+            rv$serves_plan <- serves_plan
+            rv$serves_diff <- serves_diff
+            rv$linked_sum_1 -> linked_sum_1
+            rv$linked_sum_2 <- linked_sum_2
+            rv$iterations_constraints <- iterations_constraints
+            rv$iterations_fg <- iterations_fg
+            rv$iterations_lk <- iterations_lk
+            updateLog(text)
+          }
+          food <- sample_safe(foods_impacted)
+          if(off_measures$value[off_measures$nutrient == target_measure] > 0){
+            iterations_constraints$high[iterations_constraints$nutrient == target_measure] <- iterations_constraints$high[iterations_constraints$nutrient == target_measure] + 1
+            text_1 <- paste0('Iteration: ', rv$n,'. We are too high on ',target_measure,'. Current: ',nutrients_plan$value[nutrients_plan$nutrient == target_measure],'. Max: ',nutrient_targets_wk$max[nutrient_targets_wk$nutrient == target_measure])
+            serve_range <- sort(seq(meal_plan$min[meal_plan$food_id == food], meal_plan$intake[meal_plan$food_id == food], meal_plan$size[meal_plan$food_id == food]*min_serve_size_difference))
+            if(length(serve_range) > 10){
+              serve_range <- tail(serve_range, 10)
+            }
+            
+          } else{
+            iterations_constraints$low[iterations_constraints$nutrient == target_measure] <- iterations_constraints$high[iterations_constraints$nutrient == target_measure] + 1
+            text_1 <- paste0('Iteration: ', rv$n,'. We are too low on ',target_measure,'. Current: ',nutrients_plan$value[nutrients_plan$nutrient == target_measure],'. Min: ',nutrient_targets_wk$min[nutrient_targets_wk$nutrient == target_measure])
+            serve_range <- sort(seq(meal_plan$intake[meal_plan$food_id == food], meal_plan$max[meal_plan$food_id == food], meal_plan$size[meal_plan$food_id == food]*min_serve_size_difference))
+            if(length(serve_range) > 10){
+              serve_range <- head(serve_range, 10)
+            }
+            
+          }
+          text <- paste0(paste0(c(paste0(text_1,'. ', meal_plan$food_name[meal_plan$food_id == food]," impacts ", target_measure, " and intake must be between ", meal_plan$min[meal_plan$food_id == food]," and ",meal_plan$max[meal_plan$food_id == food],". Options:"),serve_range), collapse = " "),". Current: ",meal_plan$intake[meal_plan$food_id == food])
+        }
+        if(!is.null(serve_range)){
+          new_intake <- sample_safe(serve_range)
+          text <- paste0(text, '. Changing ', meal_plan$food_name[meal_plan$food_id == food],' intake from ',meal_plan$intake[meal_plan$food_id == food],' to ',new_intake)
+          meal_plan$intake[meal_plan$food_id == food] <- new_intake
+        }
+        updateLog(text)
+        rv$n <- rv$n + 1
+        rv$meal_plan <- meal_plan
+        rv$hash_list <- hash_list
+        rv$nutrients_plan <- nutrients_plan
+        rv$nutrients_diff <- nutrients_diff
+        rv$serves_plan <- serves_plan
+        rv$serves_diff <- serves_diff
+        rv$linked_sum_1 -> linked_sum_1
+        rv$linked_sum_2 <- linked_sum_2
+        rv$iterations_constraints <- iterations_constraints
+        rv$iterations_fg <- iterations_fg
+        rv$iterations_lk <- iterations_lk
+      }
+      
+      
+    })
+    
+  })
+  
+  output$exportButtons <- renderUI({
+    if(rv$n >= test1()){
+      column(width = 12,
+             div(style = "display: inline-block; position:relative; left:calc(38.5%);",
+                 actionButton('reset_app_input', label = 'Reset app')),
+             
+             
+             div(style = "display: inline-block; position:relative; left:calc(41.5%);",
+                 downloadButton(
+                   "report_data",
+                   label = "Download report",
+                   style = "color: #fff; background-color: #222222; border-color: #fff;"
+                 ))
+             
+      )
+    }
+  })
+  
+  
+  observeEvent(input$reset_app_input, {session$reload()})
+  
+  output$report_data <- downloadHandler(
+    filename = function() {
+      paste0('results_monte_carlo_', format(Sys.time(), "%Y%m%d%H%M"), '.xlsx')
+    },
+    content = function(file) {
+      df_data <- data.frame(
+        'Folder path' = report$results$path_dir,
+        'Iterations' = report$results$iterations,
+        'Meals created' = report$results$meals_created
+      )
+      
+      file_content <- list(
+        `General` = df_data,
+        `Last meal` = data.frame(report$results$last_meal),
+        `Nutrient constraints` = data.frame(report$results$iterations_constraints),
+        `Group constraints` = data.frame(report$results$iterations_fg),
+        `Linked foods` = data.frame(report$results$iterations_lk),
+        `Nutrients diff` = data.frame(report$results$nutrients_diff),
+        `Groups diff` = data.frame(report$results$nutrient_targets_wk),
+        `Nutrient targets` = data.frame(report$results$nutrient_targets_wk),
+        `Group targets` = data.frame(report$results$food_groups_wk)
+      )
+      
+      if (report$results$meals_created > 0) {
+        files <- list.files(path = report$results$path_dir, pattern = "meal_plan_", all.files = FALSE,
+                            full.names = FALSE, recursive = FALSE,
+                            ignore.case = FALSE, include.dirs = FALSE, no.. = FALSE)
+        df <- data.frame(item = names(df4()))
+        confidence_interval <- 1 - ((input$confidence_interval_input/100)/2)
+        for(file in files){
+          meal_df <- read.csv(file.path(path_file, file))
+          col <- as.character(strsplit(file,'.csv')[1])
+          df[,col] <- double(nrow(df))
+          
+          for(i in 1:nrow(df)){
+            switch(df$item[i],
+                   'energy_kj_g' = {df[i, col] <- sum(meal_df$energy_kj_g, na.rm = TRUE)},
+                   'fat_g' = {df[i, col] <- sum(meal_df$fat_g, na.rm = TRUE)},
+                   'sat_fat_g' = {df[i, col] <- sum(meal_df$sat_fat_g, na.rm = TRUE)},
+                   'CHO_g' = {df[i, col] <- sum(meal_df$CHO_g, na.rm = TRUE)},
+                   'sugars_g' = {df[i, col] <- sum(meal_df$sugars_g, na.rm = TRUE)},
+                   'protein_g' = {df[i, col] <- sum(meal_df$protein_g, na.rm = TRUE)},
+                   'fat_perc' = {df[i, col] <- (sum(meal_df$fat_g, na.rm = TRUE)*f1)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+                   'sat_fat_perc' = {df[i, col] <- (sum(meal_df$sat_fat_g, na.rm = TRUE)*f1)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+                   'CHO_perc' = {df[i, col] <- (sum(meal_df$CHO_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+                   'sugars_perc' = {df[i, col] <- (sum(meal_df$sugars_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+                   'fibre_g' = {df[i, col] <- sum(meal_df$fibre_g, na.rm = TRUE)},
+                   'protein_perc' = {df[i, col] <- (sum(meal_df$protein_g, na.rm = TRUE)*f2)/sum(meal_df$energy_kj_g, na.rm = TRUE)*100},
+                   'red_meat_g' = {df[i, col] <- sum(meal_df$intake[meal_df$food_group == 'red meat'], na.rm = TRUE)},
+                   'sodium_mg' = {df[i, col] <- sum(meal_df$sodium_mg, na.rm = TRUE)},
+                   'fruit_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Fruit']), na.rm = TRUE)},
+                   'vegetable_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Vegetables']), na.rm = TRUE)},
+                   'grains_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Grains']), na.rm = TRUE)},
+                   'dairy_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Dairy/alternatives']), na.rm = TRUE)},
+                   'protein_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Protein foods: Meat, poultry, seafood, eggs, legumes, nuts, seeds']), na.rm = TRUE)},
+                   'fats_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Fats & oils']), na.rm = TRUE)},
+                   'sauces_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Sauces, dressings, spreads, sugars']), na.rm = TRUE)},
+                   'beverages_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Beverages']), na.rm = TRUE)},
+                   'ssb_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'ssb']), na.rm = TRUE)},
+                   'starchy_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Starchy vegetables']), na.rm = TRUE)},
+                   'red_meat_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'red meat']), na.rm = TRUE)},
+                   'alcohol_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Alcohol']), na.rm = TRUE)},
+                   'discretionary_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Discretionary foods']), na.rm = TRUE)},
+                   'takeaway_serves' = {df[i, col] <- sum((meal_df$serves[meal_df$food_group == 'Takeaway']), na.rm = TRUE)},
+                   'fruit_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Fruit'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'vegetable_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Vegetables'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'grains_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Grains'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'dairy_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Dairy/alternatives'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'protein_foods_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Protein foods: Meat, poultry, seafood, eggs, legumes, nuts, seeds'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'fats_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Fats & oils'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'sauces_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Sauces, dressings, spreads, sugars'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'beverages_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Beverages'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'ssb_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'ssb'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'starchy_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Starchy vegetables'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'red_meat_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'red meat'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'alcohol_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Alcohol'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'discretionary_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Discretionary foods'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'takeaway_perc' = {df[i, col] <- (sum(meal_df$energy_kj_g[meal_df$food_group == 'Takeaway'], na.rm = TRUE)/(sum(meal_df$energy_kj_g, na.rm = TRUE)))*100},
+                   'price' = {df[i, col] <- sum(meal_df$price, na.rm = TRUE)},
+                   'CF_gCO2eq' = {df[i, col] <- sum(meal_df$CF_gCO2eq, na.rm = TRUE)},
+                   'WF_l' = {df[i, col] <- sum(meal_df$WF_l, na.rm = TRUE)},
+                   'EF_g_m2' = {df[i, col] <- sum(meal_df$EF_g_m2, na.rm = TRUE)}
+            )
+            
+          }
+        }
+        df_results <- data.frame(item = df$item)
+        df_results[,c('value', 'margin')] <- double(nrow(df))
+        
+        for(i in 1:nrow(df)){
+          n <- ncol(df) - 1
+          df_results$value[i] <- as.numeric(rowMeans(df[i,2:ncol(df)]))
+          s <- sd(df[i,2:ncol(df)])
+          df_results$margin[i] <- ifelse(n <= 30,
+                                         qt(confidence_interval,df=n-1)*s/sqrt(n),
+                                         qnorm(confidence_interval)*s/sqrt(n))
+          
+        }
+        file_content[["Results"]] <- df_results
+      }
+      
+      write_xlsx(file_content, file)
+    }
+  )
   
   outputOptions(output, "alcoholSelected", suspendWhenHidden = FALSE)
   outputOptions(output, "discretionarySelected", suspendWhenHidden = FALSE)
@@ -3080,8 +3520,8 @@ server <- function(input, output, session){
   outputOptions(output, "linkedFoods1", suspendWhenHidden = FALSE)
   outputOptions(output, "linkedFoods2", suspendWhenHidden = FALSE)
   outputOptions(output, "sizeFoods", suspendWhenHidden = FALSE)
-
-
+  
+  
 }
 
 #App creation-------------------------------------------------------------------
