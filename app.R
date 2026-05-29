@@ -747,19 +747,64 @@ food_server <- function(id, group_label){
 #UI/Tabs------------------------------------------------------------------------
 
 #'Introduction' tab
-intro_tab <- tabPanel('Introduction',
-                      useShinyjs(),
-                      fluidRow(column(width = 2),
-                               column(width = 8,
-                                      div(
-                                        style = "display: inline-block; position:relative; left:calc(37.5%);",
-                                        downloadButton(
-                                          "dietcost_manual",
-                                          label = "Download manual",
-                                          style = "color: #fff; background-color: #222222; border-color: #fff;"
-                                        )
-                                      )),
-                               column(width = 2)))
+intro_tab <- tabPanel(
+  'Introduction',
+  useShinyjs(),
+  fluidRow(
+    column(width = 2),
+    column(
+      width = 8,
+      align = 'center',
+      
+      h1("Welcome to DIETCOST!"),
+      br(),
+      
+      p(
+        "The DIETCOST is a package originally developed by researchers at the University of Auckland, with the aim of estimating and comparing the cost of different dietary patterns. The package is currently available on CRAN and can be used by researchers, students, and policymakers interested in analyzing the economic accessibility of healthy and sustainable diets.",
+        style = "text-align: justify; color: black; font-size:24px;"
+      ),
+      
+      p(
+        "The tool uses modeling techniques to generate food combinations that meet nutritional, cultural, and acceptability criteria, making it possible to estimate the cost of current, healthy, and sustainable diets in different contexts. In addition to cost, DIETCOST can be integrated with environmental indicators, such as carbon footprint and water footprint, expanding its application to studies on the sustainability of food systems.",
+        style = "text-align: justify; color: black; font-size:24px;"
+      ),
+      
+      p(
+        "To facilitate the use of DIETCOST and broaden its reach, we have developed this application, which allows two forms of use: manual entry of information or upload of users’ own datasets. In this way, researchers, students, and professionals can carry out analyses in a simpler and more intuitive manner, even without prior programming experience.",
+        style = "text-align: justify; color: black; font-size:24px;"
+      ),
+      
+      p(
+        "We hope this tool will contribute to advancing research on the cost and environmental impact of diets, supporting the production of scientific evidence and the development of public policies aimed at promoting healthy, sustainable, and economically accessible food.",
+        style = "text-align: justify; color: black; font-size:24px;"
+      ),
+      
+      p(
+        "For questions or suggestions, please contact h@bracarense.com.",
+        style = "text-align: justify; color: black; font-size:24px;"
+      ),
+      
+      p(
+        "We, researchers at the Federal University of Minas Gerais (UFMG), remain committed to promoting open science and to building a fairer, healthier, and more sustainable society.",
+        style = "text-align: justify; color: black; font-size:24px;"
+      ),
+      
+      br(),
+      
+      div(
+        style = "text-align: center; margin-top: 20px;",
+        tags$a(
+          href = "dietcost_manual.pdf",
+          download = "dietcost_manual.pdf",
+          class = "btn btn-default",
+          "Download manual",
+          style = "color: #fff; background-color: #222222; border-color: #fff;"
+        )
+      )
+    ),
+    column(width = 2)
+  )
+)
 
 #'Foods' tab
 foods_tab <- tabPanel('Foods',
@@ -2358,13 +2403,6 @@ server <- function(input, output, session){
     }
   )
   
-  output$dietcost_manual <- downloadHandler(
-    filename = 'dietcost_manual.pdf',
-    content = function(file){
-      file.copy('www/dietcost_manual.pdf',file)
-    }
-  )
-  
   output$food_data_model <- downloadHandler(
     filename = 'food_data_model.xlsx',
     content = function(file){
@@ -3439,7 +3477,7 @@ server <- function(input, output, session){
         df <- data.frame(item = names(df4()))
         confidence_interval <- 1 - ((input$confidence_interval_input/100)/2)
         for(file in files){
-          meal_df <- read.csv(file.path(path_file, file))
+          meal_df <- read.csv(file.path(report$results$path_dir, file))
           col <- as.character(strsplit(file,'.csv')[1])
           df[,col] <- double(nrow(df))
           
